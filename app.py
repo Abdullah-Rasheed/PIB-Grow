@@ -7,7 +7,7 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-# Load environment variables from a .env file (store your credentials here)
+# Load environment variables from a .env file
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -71,15 +71,13 @@ def validate_token():
 @app.route("/data-deletion", methods=["POST"])
 def data_deletion():
     """Handle data deletion requests."""
-    user_email = request.json.get("email")  # Or any other user identifier
+    user_email = request.json.get("email")
     if not user_email:
         return jsonify({"error": "Email is required"}), 400
 
-    # Add logic to delete the user's data from your database
-    # Example: delete_user_data(user_email)
-
-    # For now, just simulating a deletion process
+    # Simulating data deletion
     return jsonify({"message": "Data deletion request successful for email: " + user_email}), 200
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)
