@@ -39,6 +39,10 @@
             border-radius: 5px;
             margin-bottom: 10px;
         }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+        }
         .footer {
             margin-top: 40px;
             text-align: center;
@@ -80,6 +84,7 @@
             <div class="card-body">
                 <p><strong>Page ID:</strong> {{ page['id'] }}</p>
 
+                <!-- Insights Section -->
                 {% if page.insights and 'data' in page.insights %}
                 <div class="mb-3">
                     <h5>Page Insights</h5>
@@ -89,8 +94,30 @@
                     </div>
                     {% endfor %}
                 </div>
+                {% elif page.insights and 'error' in page.insights %}
+                <p class="error-message">
+                    Error: {{ page.insights['error']['error_user_msg'] or page.insights['error']['message'] }}
+                </p>
                 {% else %}
                 <p><em>No insights available for this page.</em></p>
+                {% endif %}
+
+                <!-- Monetization Section -->
+                {% if page.monetization and 'data' in page.monetization %}
+                <div class="mb-3">
+                    <h5>Monetization Data</h5>
+                    {% for monetization in page.monetization['data'] %}
+                    <div class="metric">
+                        <strong>{{ monetization['name'] }}:</strong> {{ monetization['value'] }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif page.monetization and 'error' in page.monetization %}
+                <p class="error-message">
+                    Error: {{ page.monetization['error']['error_user_msg'] or page.monetization['error']['message'] }}
+                </p>
+                {% else %}
+                <p><em>No monetization data available for this page.</em></p>
                 {% endif %}
             </div>
         </div>
