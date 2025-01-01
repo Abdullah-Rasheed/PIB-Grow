@@ -40,7 +40,11 @@ def dashboard():
     if "error" in pages:
         return render_template("error.html", error=pages["error"])
 
-    # Removed insights and monetization fetching part for now
+    # Fetch page insights with valid metrics
+    for page in pages.get("data", []):
+        page_id = page["id"]
+        page["insights"] = get_page_insights(access_token, page_id)
+
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
 
@@ -85,6 +89,13 @@ def get_user_info(access_token):
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
     url = f"https://graph.facebook.com/me/accounts?access_token={access_token}"
+    response = requests.get(url)
+    return response.json()
+
+
+def get_page_insights(access_token, page_id):
+    """Fetch insights for a given page with a valid metric."""
+    url = f"https://graph.facebook.com/{page_id}/insights?metric=page_impressions,page_engaged_users&access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
