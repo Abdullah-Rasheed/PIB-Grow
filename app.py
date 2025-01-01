@@ -1,9 +1,10 @@
 import os
 import csv
-from flask import Flask, request, jsonify, redirect, render_template, Response
+from flask import Flask, request, jsonify, redirect, render_template, send_file
 from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
+from io import StringIO
 
 # Initialize the Flask app
 app = Flask(__name__, template_folder="templates")
@@ -17,11 +18,11 @@ FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
-# Facebook OAuth URL configuration (removed pages_read_monetization_insights)
+# Facebook OAuth URL configuration
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
     f"&redirect_uri={REDIRECT_URI}&scope=public_profile,pages_show_list,pages_read_engagement,"
-    f"pages_read_user_content,pages_messaging,pages_manage_metadata"
+    f"pages_read_user_content,pages_messaging,pages_manage_metadata,pages_read_monetization_insights"
 )
 
 @app.route("/")
@@ -39,11 +40,7 @@ def dashboard():
     if "error" in pages:
         return render_template("error.html", error=pages["error"])
 
-    # Fetch insights for each page
-    for page in pages.get("data", []):
-        page_id = page["id"]
-        page["insights"] = get_page_insights(access_token, page_id)
-
+    # Removed insights and monetization fetching part for now
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
 
@@ -78,40 +75,6 @@ def auth_callback():
         return jsonify({"error": data.get("error", "Unknown error")}), 400
 
 
-@app.route("/export-csv")
-def export_csv():
-    """Generate and download a CSV file containing page insights data."""
-    access_token = request.args.get("access_token")
-    if not access_token:
-        return redirect("/auth/start")
-
-    pages = get_user_pages(access_token)
-    if "error" in pages:
-        return render_template("error.html", error=pages["error"])
-
-    # Prepare CSV data
-    csv_data = []
-    for page in pages.get("data", []):
-        page_id = page["id"]
-        page["insights"] = get_page_insights(access_token, page_id)
-        for insight in page["insights"].get("data", []):
-            csv_data.append({
-                "Page ID": page_id,
-                "Page Name": page["name"],
-                "Metric": insight["name"],
-                "Value": insight["values"][0]["value"] if insight["values"] else "N/A"
-            })
-
-    # Create CSV response
-    def generate():
-        fieldnames = ["Page ID", "Page Name", "Metric", "Value"]
-        writer = csv.DictWriter(Response().stream, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in csv_data:
-            writer.writerow(row)
-    
-    return Response(generate(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=page_insights.csv"})
-
 def get_user_info(access_token):
     """Fetch user profile information from Facebook."""
     url = f"https://graph.facebook.com/me?fields=id,name&access_token={access_token}"
@@ -122,13 +85,6 @@ def get_user_info(access_token):
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
     url = f"https://graph.facebook.com/me/accounts?access_token={access_token}"
-    response = requests.get(url)
-    return response.json()
-
-
-def get_page_insights(access_token, page_id):
-    """Fetch insights for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/insights?metric=page_impressions,page_engaged_users&access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
@@ -146,6 +102,29 @@ def data_deletion():
         "confirmation_code": "123456789"
     }
     return jsonify(response)
+
+
+@app.route("/download_csv")
+def download_csv():
+    """Generate and download a CSV file of pages' data."""
+    access_token = request.args.get("access_token")
+    if not access_token:
+        return redirect("/auth/start")
+
+    pages = get_user_pages(access_token)
+    if "error" in pages:
+        return jsonify({"error": pages["error"]}), 400
+
+    # Prepare CSV content
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Page ID", "Page Name"])
+
+    for page in pages.get("data", []):
+        writer.writerow([page["id"], page["name"]])
+
+    output.seek(0)
+    return send_file(output, mimetype="text/csv", as_attachment=True, download_name="pages_data.csv")
 
 
 # Expose the `app` object for Vercel deployment
