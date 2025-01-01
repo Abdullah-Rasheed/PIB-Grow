@@ -16,7 +16,7 @@ FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
-# Facebook OAuth URL configuration (removed pages_read_monetization_insights)
+# Facebook OAuth URL configuration
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
     f"&redirect_uri={REDIRECT_URI}&scope=public_profile,pages_show_list,pages_read_engagement,"
@@ -38,10 +38,11 @@ def dashboard():
     if "error" in pages:
         return render_template("error.html", error=pages["error"])
 
-    # Fetch insights for each page
+    # Fetch detailed data for each page
     for page in pages.get("data", []):
         page_id = page["id"]
-        page["insights"] = get_page_insights(access_token, page_id)
+        page["metadata"] = get_page_metadata(access_token, page_id)
+        page["engagement"] = get_page_engagement(access_token, page_id)
 
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
@@ -86,13 +87,20 @@ def get_user_info(access_token):
 
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
-    url = f"https://graph.facebook.com/me/accounts?access_token={access_token}"
+    url = f"https://graph.facebook.com/me/accounts?fields=id,name,category,roles&access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
 
-def get_page_insights(access_token, page_id):
-    """Fetch insights for a given page."""
+def get_page_metadata(access_token, page_id):
+    """Fetch metadata for a given page."""
+    url = f"https://graph.facebook.com/{page_id}?fields=about,description,fan_count&access_token={access_token}"
+    response = requests.get(url)
+    return response.json()
+
+
+def get_page_engagement(access_token, page_id):
+    """Fetch engagement data for a given page."""
     url = f"https://graph.facebook.com/{page_id}/insights?metric=page_impressions,page_engaged_users&access_token={access_token}"
     response = requests.get(url)
     return response.json()
