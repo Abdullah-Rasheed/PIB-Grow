@@ -18,11 +18,11 @@ FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
-# Facebook OAuth URL configuration
+# Facebook OAuth URL configuration (removed pages_read_monetization_insights)
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
     f"&redirect_uri={REDIRECT_URI}&scope=public_profile,pages_show_list,pages_read_engagement,"
-    f"pages_read_user_content,pages_messaging,pages_manage_metadata,pages_read_monetization_insights"
+    f"pages_read_user_content,pages_messaging,pages_manage_metadata"
 )
 
 @app.route("/")
