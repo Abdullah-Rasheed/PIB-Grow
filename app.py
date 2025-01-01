@@ -1,5 +1,6 @@
 import os
-from flask import Flask, request, jsonify, redirect, render_template
+import csv
+from flask import Flask, request, jsonify, redirect, render_template, Response
 from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
@@ -76,6 +77,40 @@ def auth_callback():
     else:
         return jsonify({"error": data.get("error", "Unknown error")}), 400
 
+
+@app.route("/export-csv")
+def export_csv():
+    """Generate and download a CSV file containing page insights data."""
+    access_token = request.args.get("access_token")
+    if not access_token:
+        return redirect("/auth/start")
+
+    pages = get_user_pages(access_token)
+    if "error" in pages:
+        return render_template("error.html", error=pages["error"])
+
+    # Prepare CSV data
+    csv_data = []
+    for page in pages.get("data", []):
+        page_id = page["id"]
+        page["insights"] = get_page_insights(access_token, page_id)
+        for insight in page["insights"].get("data", []):
+            csv_data.append({
+                "Page ID": page_id,
+                "Page Name": page["name"],
+                "Metric": insight["name"],
+                "Value": insight["values"][0]["value"] if insight["values"] else "N/A"
+            })
+
+    # Create CSV response
+    def generate():
+        fieldnames = ["Page ID", "Page Name", "Metric", "Value"]
+        writer = csv.DictWriter(Response().stream, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in csv_data:
+            writer.writerow(row)
+    
+    return Response(generate(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=page_insights.csv"})
 
 def get_user_info(access_token):
     """Fetch user profile information from Facebook."""
