@@ -16,11 +16,11 @@ FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
-# Facebook OAuth URL configuration
+# Facebook OAuth URL configuration (removed pages_read_monetization_insights)
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
     f"&redirect_uri={REDIRECT_URI}&scope=public_profile,pages_show_list,pages_read_engagement,"
-    f"pages_read_user_content,pages_messaging,pages_manage_metadata,pages_read_monetization_insights"
+    f"pages_read_user_content,pages_messaging,pages_manage_metadata"
 )
 
 @app.route("/")
@@ -38,11 +38,10 @@ def dashboard():
     if "error" in pages:
         return render_template("error.html", error=pages["error"])
 
-    # Fetch insights and monetization data for each page
+    # Fetch insights for each page
     for page in pages.get("data", []):
         page_id = page["id"]
         page["insights"] = get_page_insights(access_token, page_id)
-        page["monetization"] = get_monetization_data(access_token, page_id)
 
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
@@ -95,13 +94,6 @@ def get_user_pages(access_token):
 def get_page_insights(access_token, page_id):
     """Fetch insights for a given page."""
     url = f"https://graph.facebook.com/{page_id}/insights?metric=page_impressions,page_engaged_users&access_token={access_token}"
-    response = requests.get(url)
-    return response.json()
-
-
-def get_monetization_data(access_token, page_id):
-    """Fetch monetization data for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
