@@ -1,10 +1,8 @@
 import os
-import csv
-from flask import Flask, request, jsonify, redirect, render_template, send_file
+from flask import Flask, request, jsonify, redirect, render_template
 from flask_cors import CORS
 import requests
 from dotenv import load_dotenv
-from io import StringIO
 
 # Initialize the Flask app
 app = Flask(__name__, template_folder="templates")
@@ -40,7 +38,7 @@ def dashboard():
     if "error" in pages:
         return render_template("error.html", error=pages["error"])
 
-    # Fetch page insights with valid metrics
+    # Fetch insights for each page
     for page in pages.get("data", []):
         page_id = page["id"]
         page["insights"] = get_page_insights(access_token, page_id)
@@ -94,7 +92,7 @@ def get_user_pages(access_token):
 
 
 def get_page_insights(access_token, page_id):
-    """Fetch insights for a given page with a valid metric."""
+    """Fetch insights for a given page."""
     url = f"https://graph.facebook.com/{page_id}/insights?metric=page_impressions,page_engaged_users&access_token={access_token}"
     response = requests.get(url)
     return response.json()
@@ -113,29 +111,6 @@ def data_deletion():
         "confirmation_code": "123456789"
     }
     return jsonify(response)
-
-
-@app.route("/download_csv")
-def download_csv():
-    """Generate and download a CSV file of pages' data."""
-    access_token = request.args.get("access_token")
-    if not access_token:
-        return redirect("/auth/start")
-
-    pages = get_user_pages(access_token)
-    if "error" in pages:
-        return jsonify({"error": pages["error"]}), 400
-
-    # Prepare CSV content
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Page ID", "Page Name"])
-
-    for page in pages.get("data", []):
-        writer.writerow([page["id"], page["name"]])
-
-    output.seek(0)
-    return send_file(output, mimetype="text/csv", as_attachment=True, download_name="pages_data.csv")
 
 
 # Expose the `app` object for Vercel deployment
