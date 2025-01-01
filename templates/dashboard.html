@@ -56,7 +56,7 @@
 <body>
     <div class="header">
         <h1>Welcome, {{ user['name'] }}</h1>
-        <p>View your page insights and monetization performance</p>
+        <p>View your page insights and performance metrics</p>
     </div>
 
     <div class="container">
@@ -91,19 +91,6 @@
                 </div>
                 {% else %}
                 <p><em>No insights available for this page.</em></p>
-                {% endif %}
-
-                {% if page.monetization and 'data' in page.monetization %}
-                <div class="mb-3">
-                    <h5>Monetization Data</h5>
-                    {% for monetization in page.monetization['data'] %}
-                    <div class="metric">
-                        <strong>{{ monetization['name'] }}:</strong> {{ monetization['value'] }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p><em>No monetization data available for this page.</em></p>
                 {% endif %}
             </div>
         </div>
