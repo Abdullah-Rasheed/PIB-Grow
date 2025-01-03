@@ -14,12 +14,12 @@ load_dotenv()
 # Facebook App credentials
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
+REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-app-url/auth/callback")
 
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
-    f"&redirect_uri={REDIRECT_URI}&scope=public_profile,pages_show_list,pages_read_engagement,"
+    f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
     f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
 )
 
@@ -32,25 +32,15 @@ def dashboard():
 
     user_info = get_user_info(access_token)
     if "error" in user_info:
-        return render_template("dashboard.html", user=None, pages=None, error=user_info["error"])
+        return render_template("error.html", error=user_info["error"])
 
     pages = get_user_pages(access_token)
-    if "error" in pages:
-        return render_template("dashboard.html", user=user_info, pages=None, error=pages["error"])
-
-    # Fetch detailed data for each page
-    pages_data = []
     for page in pages.get("data", []):
         page_id = page["id"]
-        page_name = page["name"]
-        page_data = {
-            "page_id": page_id,
-            "page_name": page_name,
-            "insights": get_page_engagement(access_token, page_id),
-        }
-        pages_data.append(page_data)
+        page["insights"] = get_page_engagement(access_token, page_id)
+        page["monetization"] = get_page_monetization(access_token, page_id)
 
-    return render_template("dashboard.html", user=user_info, pages=pages_data, error=None)
+    return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
 
 @app.route("/auth/start", methods=["GET"])
@@ -66,7 +56,6 @@ def auth_callback():
     if not code:
         return jsonify({"error": "Authorization code not found"}), 400
 
-    # Exchange the code for an access token
     token_url = "https://graph.facebook.com/v17.0/oauth/access_token"
     params = {
         "client_id": FACEBOOK_APP_ID,
@@ -100,11 +89,15 @@ def get_user_pages(access_token):
 
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
-    url = (
-        f"https://graph.facebook.com/{page_id}/insights"
-        f"?metric=page_impressions,page_engaged_users,page_consumptions"
-        f"&access_token={access_token}"
-    )
+    metrics = "page_impressions,page_engaged_users,page_fan_adds"
+    url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
+    response = requests.get(url)
+    return response.json()
+
+
+def get_page_monetization(access_token, page_id):
+    """Fetch monetization data for a given page."""
+    url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
@@ -116,12 +109,11 @@ def data_deletion():
     if not body or "signed_request" not in body:
         return jsonify({"error": "Invalid request"}), 400
 
-    # Generate the response for data deletion
     response = {
-        "url": "https://pib-grow.vercel.app/",
+        "url": "https://your-app-url/",
         "confirmation_code": "123456789"
     }
     return jsonify(response)
 
 
-# Expose the `app` object for Vercel deployment
+# Expose the `app` object for deployment
