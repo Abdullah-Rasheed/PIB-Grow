@@ -38,7 +38,7 @@ def dashboard():
     for page in pages.get("data", []):
         page_id = page["id"]
         page["insights"] = get_page_engagement(access_token, page_id)
-        page["monetization"] = get_page_monetization(access_token, page_id)
+        page["monetization"] = get_page_ads_data(access_token, page_id)
 
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
@@ -89,15 +89,15 @@ def get_user_pages(access_token):
 
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
-    metrics = "page_impressions,page_engaged_users,page_fan_adds"  # Specify valid metrics
+    metrics = "page_impressions,page_engaged_users,page_fan_adds"
     url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
 
-def get_page_monetization(access_token, page_id):
-    """Fetch monetization data for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/insights?metric=ad_impressions,ad_clicks&access_token={access_token}"  # Updated endpoint
+def get_page_ads_data(access_token, page_id):
+    """Fetch ad performance data for a given page."""
+    url = f"https://graph.facebook.com/{page_id}/ads?access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
