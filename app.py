@@ -16,11 +16,11 @@ FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-app-url/auth/callback")
 
-# Facebook OAuth URL configuration with updated permissions
+# Facebook OAuth URL configuration
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
-    f"&redirect_uri={REDIRECT_URI}&scope=ads_management,pages_read_engagement,"
-    f"pages_show_list,pages_manage_ads,pages_manage_posts,pages_manage_metadata,pages_messaging"
+    f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
+    f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
 )
 
 @app.route("/")
@@ -89,7 +89,7 @@ def get_user_pages(access_token):
 
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
-    metrics = "page_impressions,page_engaged_users,page_fan_adds,page_views,post_engagement"
+    metrics = "page_impressions,page_engaged_users,page_fan_adds"  # Specify valid metrics
     url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
     response = requests.get(url)
     return response.json()
@@ -97,7 +97,7 @@ def get_page_engagement(access_token, page_id):
 
 def get_page_monetization(access_token, page_id):
     """Fetch monetization data for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
+    url = f"https://graph.facebook.com/{page_id}/insights?metric=ad_impressions,ad_clicks&access_token={access_token}"  # Updated endpoint
     response = requests.get(url)
     return response.json()
 
@@ -117,5 +117,3 @@ def data_deletion():
 
 
 # Expose the `app` object for deployment
-if __name__ == "__main__":
-    app.run(debug=True)
