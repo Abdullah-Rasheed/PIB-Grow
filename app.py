@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, jsonify, redirect, render_template
 from flask_cors import CORS
 import requests
+import logging
 from dotenv import load_dotenv
 
 # Initialize the Flask app
@@ -23,6 +24,9 @@ FB_AUTH_URL = (
     f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
 )
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
 @app.route("/")
 def dashboard():
     """Render the dashboard using Facebook API data."""
@@ -34,7 +38,13 @@ def dashboard():
     if "error" in user_info:
         return render_template("error.html", error=user_info["error"])
 
+    # Log the access token and user data
+    logging.debug(f"Access Token: {access_token}")
+    logging.debug(f"User Info: {user_info}")
+
     pages = get_user_pages(access_token)
+    logging.debug(f"Pages Data: {pages}")  # Log the pages data to check what's returned
+
     for page in pages.get("data", []):
         page_id = page["id"]
         page["insights"] = get_page_engagement(access_token, page_id)
@@ -96,8 +106,8 @@ def get_page_engagement(access_token, page_id):
 
 
 def get_page_ads_data(access_token, page_id):
-    """Fetch ad performance data for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/ads?access_token={access_token}"
+    """Fetch monetization data for a given page."""
+    url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
