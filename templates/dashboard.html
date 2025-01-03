@@ -33,32 +33,78 @@
             border-top-left-radius: 10px;
             border-top-right-radius: 10px;
         }
+        .metric {
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #6c757d;
+        }
+        .footer a {
+            color: #4e54c8;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Welcome, {{ user['name'] }}</h1>
+        <h1>Welcome, {{ user['name'] if user else 'Guest' }}</h1>
         <p>View your page insights and performance metrics</p>
     </div>
 
     <div class="container">
+        {% if error %}
+        <p class="error-message">Error: {{ error['message'] }}</p>
+        {% endif %}
+
+        {% if pages %}
         {% for page in pages %}
         <div class="page card mb-4">
             <div class="card-header">
-                <h2>Page: {{ page['name'] }}</h2>
+                <h2>Page: {{ page['page_name'] }}</h2>
             </div>
             <div class="card-body">
-                <p><strong>Page ID:</strong> {{ page['id'] }}</p>
-                <p><strong>Fans:</strong> {{ page.metadata.fan_count }}</p>
-                <!-- Insights Section -->
-                {% for metric in page.engagement['data'] %}
-                <div>
-                    <strong>{{ metric['name'] }}</strong>: {{ metric['values'][0]['value'] }}
+                <p><strong>Page ID:</strong> {{ page['page_id'] }}</p>
+
+                {% if page.insights and 'error' in page.insights %}
+                <p class="error-message">
+                    Error: {{ page.insights['error']['error_user_msg'] or page.insights['error']['message'] }}
+                </p>
+                {% elif page.insights and 'data' in page.insights %}
+                <div class="mb-3">
+                    <h5>Page Insights</h5>
+                    {% for metric in page.insights['data'] %}
+                    <div class="metric">
+                        <strong>{{ metric['name'] }}:</strong> {{ metric['values'][0]['value'] }}
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+                {% else %}
+                <p><em>No insights available for this page.</em></p>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
+        {% else %}
+        <p>No pages found.</p>
+        {% endif %}
     </div>
+
+    <div class="footer">
+        <p>&copy; 2025 Facebook Data Dashboard. Built with ❤️ by <a href="#">Abdullah Rasheed</a></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
