@@ -19,8 +19,8 @@ REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callb
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
-    f"&redirect_uri={REDIRECT_URI}&scope=public_profile,pages_show_list,pages_read_engagement,"
-    f"pages_read_user_content,pages_messaging,pages_manage_metadata"
+    f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
+    f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
 )
 
 @app.route("/")
@@ -46,12 +46,10 @@ def dashboard():
 
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
-
 @app.route("/auth/start", methods=["GET"])
 def start_auth():
     """Redirect users to Facebook login."""
     return redirect(FB_AUTH_URL)
-
 
 @app.route("/auth/callback", methods=["GET"])
 def auth_callback():
@@ -77,13 +75,11 @@ def auth_callback():
     else:
         return jsonify({"error": data.get("error", "Unknown error")}), 400
 
-
 def get_user_info(access_token):
     """Fetch user profile information from Facebook."""
     url = f"https://graph.facebook.com/me?fields=id,name&access_token={access_token}"
     response = requests.get(url)
     return response.json()
-
 
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
@@ -91,20 +87,17 @@ def get_user_pages(access_token):
     response = requests.get(url)
     return response.json()
 
-
 def get_page_metadata(access_token, page_id):
     """Fetch metadata for a given page."""
     url = f"https://graph.facebook.com/{page_id}?fields=about,description,fan_count&access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
-
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
     url = f"https://graph.facebook.com/{page_id}/insights?metric=page_impressions,page_engaged_users&access_token={access_token}"
     response = requests.get(url)
     return response.json()
-
 
 @app.route("/data-deletion", methods=["POST"])
 def data_deletion():
@@ -119,6 +112,5 @@ def data_deletion():
         "confirmation_code": "123456789"
     }
     return jsonify(response)
-
 
 # Expose the `app` object for Vercel deployment
