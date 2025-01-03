@@ -59,23 +59,27 @@
 </head>
 <body>
     <div class="header">
-        <h1>Welcome, {{ user['name'] if user else 'Guest' }}</h1>
+        <h1>Welcome, {{ user['name'] }}</h1>
         <p>View your page insights and performance metrics</p>
     </div>
 
     <div class="container">
-        {% if error %}
-        <p class="error-message">Error: {{ error['message'] }}</p>
-        {% endif %}
+        <div class="user-info card mb-4">
+            <div class="card-header">
+                <h2>Your Profile</h2>
+            </div>
+            <div class="card-body">
+                <p><strong>User ID:</strong> {{ user['id'] }}</p>
+            </div>
+        </div>
 
-        {% if pages %}
         {% for page in pages %}
         <div class="page card mb-4">
             <div class="card-header">
-                <h2>Page: {{ page['page_name'] }}</h2>
+                <h2>Page: {{ page['name'] }}</h2>
             </div>
             <div class="card-body">
-                <p><strong>Page ID:</strong> {{ page['page_id'] }}</p>
+                <p><strong>Page ID:</strong> {{ page['id'] }}</p>
 
                 {% if page.insights and 'error' in page.insights %}
                 <p class="error-message">
@@ -96,9 +100,6 @@
             </div>
         </div>
         {% endfor %}
-        {% else %}
-        <p>No pages found.</p>
-        {% endif %}
     </div>
 
     <div class="footer">
