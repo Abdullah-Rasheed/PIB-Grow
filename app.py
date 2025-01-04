@@ -21,7 +21,7 @@ REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-app-url/auth/callback")
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
     f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
-    f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
+    f"pages_manage_metadata,read_insights,ads_read,pages_read_user_content"
 )
 
 # Configure logging
@@ -43,8 +43,9 @@ def dashboard():
     logging.debug(f"User Info: {user_info}")
 
     pages = get_user_pages(access_token)
-    logging.debug(f"Pages Data: {pages}")  # Log the pages data to check what's returned
+    logging.debug(f"Pages Data: {pages}")
 
+    # Fetch insights and monetization data for each page
     for page in pages.get("data", []):
         page_id = page["id"]
         page["insights"] = get_page_engagement(access_token, page_id)
@@ -102,14 +103,14 @@ def get_page_engagement(access_token, page_id):
     metrics = "page_impressions,page_engaged_users,page_fan_adds"
     url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
     response = requests.get(url)
-    return response.json()
+    return response.json() if response.status_code == 200 else {"error": "No data available"}
 
 
 def get_page_ads_data(access_token, page_id):
     """Fetch monetization data for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
+    url = f"https://graph.facebook.com/{page_id}/ads?access_token={access_token}"
     response = requests.get(url)
-    return response.json()
+    return response.json() if response.status_code == 200 else {"error": "No data available"}
 
 
 @app.route("/data-deletion", methods=["POST"])
