@@ -42,21 +42,24 @@ def dashboard():
     logging.debug(f"Access Token: {access_token}")
     logging.debug(f"User Info: {user_info}")
 
-    pages = get_user_pages(access_token).get("data", [])
+    pages = get_user_pages(access_token)
+    logging.debug(f"Pages Data: {pages}")  # Log the pages data to check what's returned
 
-    # Enhance pages with insights and monetization data
-    for page in pages:
-        page_id = page.get("id")
-        if page_id:
-            page["insights"] = get_page_engagement(access_token, page_id).get("data", [])
-            page["monetization"] = get_page_ads_data(access_token, page_id).get("data", [])
+    # Initialize pages with empty insights and monetization if missing
+    for page in pages.get("data", []):
+        page_id = page["id"]
+        page["insights"] = get_page_engagement(access_token, page_id) or {}
+        page["monetization"] = get_page_ads_data(access_token, page_id) or {}
 
-    return render_template("dashboard.html", user=user_info or {}, pages=pages or [])
+    # Render the dashboard with pages data, ensuring empty data doesn't break the frontend
+    return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
+
 
 @app.route("/auth/start", methods=["GET"])
 def start_auth():
     """Redirect users to Facebook login."""
     return redirect(FB_AUTH_URL)
+
 
 @app.route("/auth/callback", methods=["GET"])
 def auth_callback():
@@ -81,11 +84,13 @@ def auth_callback():
     else:
         return jsonify({"error": data.get("error", "Unknown error")}), 400
 
+
 def get_user_info(access_token):
     """Fetch user profile information from Facebook."""
     url = f"https://graph.facebook.com/me?fields=id,name&access_token={access_token}"
     response = requests.get(url)
     return response.json()
+
 
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
@@ -93,18 +98,30 @@ def get_user_pages(access_token):
     response = requests.get(url)
     return response.json()
 
+
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
     metrics = "page_impressions,page_engaged_users,page_fan_adds"
     url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
     response = requests.get(url)
-    return response.json()
+    data = response.json()
+    # Handle empty or error responses from Facebook
+    if "data" in data:
+        return data
+    else:
+        return {}
 
 def get_page_ads_data(access_token, page_id):
     """Fetch monetization data for a given page."""
     url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
     response = requests.get(url)
-    return response.json()
+    data = response.json()
+    # Handle empty or error responses from Facebook
+    if "data" in data:
+        return data
+    else:
+        return {}
+
 
 @app.route("/data-deletion", methods=["POST"])
 def data_deletion():
@@ -119,4 +136,7 @@ def data_deletion():
     }
     return jsonify(response)
 
+
 # Expose the `app` object for deployment
+if __name__ == "__main__":
+    app.run(debug=True)
