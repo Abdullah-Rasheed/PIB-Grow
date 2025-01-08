@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, redirect, render_template
+from flask import Flask, request, redirect, render_template
 from flask_cors import CORS
 import requests
 import logging
@@ -15,7 +15,7 @@ load_dotenv()
 # Facebook App credentials
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-app-url/auth/callback")
+REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:5000/auth/callback")
 
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
@@ -34,23 +34,24 @@ def dashboard():
     if not access_token:
         return redirect("/auth/start")
 
-    # Fetch user info
-    user_info = get_user_info(access_token)
-    if "error" in user_info:
-        return render_template("error.html", error=user_info["error"])
+    try:
+        # Fetch user info
+        user_info = get_user_info(access_token)
+        if "error" in user_info:
+            return render_template("error.html", error=user_info["error"])
 
-    # Fetch pages and their insights
-    pages = get_user_pages(access_token)
-    for page in pages.get("data", []):
-        page_id = page["id"]
-        # Fetch page-level metrics
-        page["insights"] = get_page_engagement(access_token, page_id) or get_dummy_engagement()
-        # Fetch monetization data
-        page["monetization"] = get_page_monetization_data(access_token, page_id) or get_dummy_monetization()
-        # Fetch post-level metrics
-        page["posts"] = get_page_posts(access_token, page_id) or get_dummy_posts()
+        # Fetch pages and their insights
+        pages = get_user_pages(access_token)
+        for page in pages.get("data", []):
+            page_id = page["id"]
+            page["insights"] = get_page_engagement(access_token, page_id) or get_dummy_engagement()
+            page["monetization"] = get_page_monetization_data(access_token, page_id) or get_dummy_monetization()
+            page["posts"] = get_page_posts(access_token, page_id) or get_dummy_posts()
 
-    return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
+        return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+        return render_template("error.html", error="An unexpected error occurred. Please try again later.")
 
 
 @app.route("/auth/start", methods=["GET"])
@@ -64,7 +65,7 @@ def auth_callback():
     """Handle the callback and exchange code for access token."""
     code = request.args.get("code")
     if not code:
-        return jsonify({"error": "Authorization code not found"}), 400
+        return render_template("error.html", error="Authorization code not found.")
 
     token_url = "https://graph.facebook.com/v17.0/oauth/access_token"
     params = {
@@ -80,7 +81,8 @@ def auth_callback():
         access_token = data["access_token"]
         return redirect(f"/?access_token={access_token}")
     else:
-        return jsonify({"error": data.get("error", "Unknown error")}), 400
+        error_message = data.get("error", {}).get("message", "Unknown error")
+        return render_template("error.html", error=error_message)
 
 
 def get_user_info(access_token):
@@ -94,7 +96,8 @@ def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
     url = f"https://graph.facebook.com/me/accounts?fields=id,name,category&access_token={access_token}"
     response = requests.get(url)
-    return response.json()
+    data = response.json()
+    return data if "data" in data else {"data": []}
 
 
 def get_page_engagement(access_token, page_id):
@@ -165,13 +168,13 @@ def data_deletion():
     """Handle Facebook data deletion requests."""
     body = request.json
     if not body or "signed_request" not in body:
-        return jsonify({"error": "Invalid request"}), 400
+        return {"error": "Invalid request"}, 400
 
     response = {
-        "url": "https://your-app-url/",
+        "url": "http://localhost:5000/",
         "confirmation_code": "123456789"
     }
-    return jsonify(response)
+    return response
 
 
 if __name__ == "__main__":
