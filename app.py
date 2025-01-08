@@ -6,7 +6,7 @@ import logging
 from dotenv import load_dotenv
 
 # Initialize the Flask app
-app = Flask(__name__, template_folder="templates/pages")
+app = Flask(__name__, template_folder="pages")
 CORS(app)
 
 # Load environment variables from a .env file
