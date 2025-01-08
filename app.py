@@ -43,15 +43,15 @@ def dashboard():
     logging.debug(f"User Info: {user_info}")
 
     pages = get_user_pages(access_token)
-    logging.debug(f"Pages Data: {pages}")
+    logging.debug(f"Pages Data: {pages}")  # Log the pages data to check what's returned
 
-    # Add dummy data or fallback for missing insights/monetization
+    # Initialize pages with empty insights and monetization if missing
     for page in pages.get("data", []):
         page_id = page["id"]
-        page["insights"] = get_page_engagement(access_token, page_id) or get_dummy_insights()
-        page["monetization"] = get_page_ads_data(access_token, page_id) or get_dummy_monetization()
-        page["posts"] = get_page_posts(access_token, page_id) or get_dummy_posts()
+        page["insights"] = get_page_engagement(access_token, page_id) or {}
+        page["monetization"] = get_page_ads_data(access_token, page_id) or {}
 
+    # Render the dashboard with pages data, ensuring empty data doesn't break the frontend
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
 
@@ -89,22 +89,14 @@ def get_user_info(access_token):
     """Fetch user profile information from Facebook."""
     url = f"https://graph.facebook.com/me?fields=id,name&access_token={access_token}"
     response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        logging.error(f"Failed to fetch user info: {response.text}")
-        return {"name": "Guest", "id": "dummy_user_id"}
+    return response.json()
 
 
 def get_user_pages(access_token):
-    """Fetch the list of pages the user manages or return dummy data if API fails."""
+    """Fetch the list of pages the user manages."""
     url = f"https://graph.facebook.com/me/accounts?fields=id,name,category,roles&access_token={access_token}"
     response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        logging.error(f"Failed to fetch user pages: {response.text}")
-        return {"data": [get_dummy_page()]}
+    return response.json()
 
 
 def get_page_engagement(access_token, page_id):
@@ -112,74 +104,23 @@ def get_page_engagement(access_token, page_id):
     metrics = "page_impressions,page_engaged_users,page_fan_adds"
     url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
     response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
+    data = response.json()
+    # Handle empty or error responses from Facebook
+    if "data" in data:
+        return data
     else:
-        logging.error(f"Failed to fetch engagement data for page {page_id}: {response.text}")
         return {}
-
 
 def get_page_ads_data(access_token, page_id):
     """Fetch monetization data for a given page."""
     url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
     response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
+    data = response.json()
+    # Handle empty or error responses from Facebook
+    if "data" in data:
+        return data
     else:
-        logging.error(f"Failed to fetch monetization data for page {page_id}: {response.text}")
         return {}
-
-
-def get_page_posts(access_token, page_id):
-    """Fetch recent posts for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/posts?fields=id,message,insights&access_token={access_token}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        logging.error(f"Failed to fetch posts for page {page_id}: {response.text}")
-        return {}
-
-
-def get_dummy_page():
-    """Return dummy page data."""
-    return {
-        "id": "dummy_page_id",
-        "name": "Dummy Page",
-        "category": "Community",
-        "roles": ["ADMIN"],
-    }
-
-
-def get_dummy_insights():
-    """Return dummy insights data."""
-    return {
-        "data": [
-            {"name": "page_impressions", "values": [{"value": 1000}]},
-            {"name": "page_engaged_users", "values": [{"value": 200}]},
-        ]
-    }
-
-
-def get_dummy_monetization():
-    """Return dummy monetization data."""
-    return {
-        "data": [{"name": "revenue", "value": 50.0}],
-    }
-
-
-def get_dummy_posts():
-    """Return dummy posts data."""
-    return [
-        {
-            "id": "dummy_post_1",
-            "message": "Dummy Post Message",
-            "insights": [
-                {"name": "post_impressions", "values": [{"value": 500}]},
-                {"name": "post_engaged_users", "values": [{"value": 50}]},
-            ],
-        }
-    ]
 
 
 @app.route("/data-deletion", methods=["POST"])
@@ -191,7 +132,7 @@ def data_deletion():
 
     response = {
         "url": "https://your-app-url/",
-        "confirmation_code": "123456789",
+        "confirmation_code": "123456789"
     }
     return jsonify(response)
 
