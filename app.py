@@ -32,7 +32,7 @@ load_dotenv()
 # Facebook App credentials
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/start")
+REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
@@ -205,7 +205,7 @@ load_dotenv()
 # Facebook App credentials
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/start")
+REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
@@ -361,7 +361,7 @@ def data_deletion():
         return {"error": "Invalid request"}, 400
 
     response = {
-        "url": "https://pib-grow.vercel.app/auth/start",
+        "url": "https://pib-grow.vercel.app/auth/callback",
         "confirmation_code": "123456789"
     }
     return response
@@ -533,7 +533,7 @@ def data_deletion():
         return {"error": "Invalid request"}, 400
 
     response = {
-        "url": "https://pib-grow.vercel.app/auth/start",
+        "url": "https://pib-grow.vercel.app/auth/callback",
         "confirmation_code": "123456789"
     }
     return response
