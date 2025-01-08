@@ -7,6 +7,8 @@
     <title>Dashboard</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -20,11 +22,11 @@
             color: white;
             padding: 20px 0;
             text-align: center;
+            animation: fadeIn 1s ease-in-out;
         }
 
         .header h1 {
             font-size: 2.5rem;
-            animation: fadeIn 1.5s ease-in-out;
         }
 
         .container {
@@ -35,7 +37,7 @@
             border: none;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
-            margin-bottom: 30px;
+            animation: slideIn 0.5s ease-in-out;
         }
 
         .card-header {
@@ -46,23 +48,10 @@
         }
 
         .metric {
+            padding: 10px;
             background-color: #f1f1f1;
             border-radius: 5px;
-            margin-bottom: 15px;
-            padding: 15px;
-            text-align: center;
-        }
-
-        .metric h4 {
-            margin: 0;
-            font-size: 1.2rem;
-            color: #4e54c8;
-        }
-
-        .metric p {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #333;
+            margin-bottom: 10px;
         }
 
         .error-message {
@@ -85,6 +74,7 @@
             text-decoration: underline;
         }
 
+        /* Animations */
         @keyframes fadeIn {
             0% {
                 opacity: 0;
@@ -94,56 +84,94 @@
                 opacity: 1;
             }
         }
+
+        @keyframes slideIn {
+            0% {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Dark mode */
+        .dark-mode {
+            background-color: #121212;
+            color: white;
+        }
+
+        .dark-mode .header {
+            background: linear-gradient(135deg, #1e1e1e, #3a3a3a);
+        }
     </style>
 </head>
 
 <body>
     <div class="header">
         <h1>Welcome, {{ user['name'] }}</h1>
-        <p>Analyze your Facebook Page performance metrics and monetization data</p>
+        <p>View your page insights and performance metrics</p>
     </div>
 
     <div class="container">
-        {% if pages and pages|length > 0 %}
-        {% for page in pages %}
-        <div class="card">
+        <div class="user-info card mb-4">
             <div class="card-header">
-                <h2>{{ page['name'] }}</h2>
+                <h2>Your Profile</h2>
             </div>
             <div class="card-body">
+                <p><strong>User ID:</strong> {{ user['id'] }}</p>
+            </div>
+        </div>
+
+        <div class="debug-info card mb-4">
+            <div class="card-header">
+                <h3>Debugging Info</h3>
+            </div>
+            <div class="card-body">
+                <pre>{{ pages | tojson(indent=2) }}</pre>
+            </div>
+        </div>
+
+        {% for page in pages %}
+        <div class="page card mb-4">
+            <div class="card-header">
+                <h2>Page: {{ page['name'] }}</h2>
+            </div>
+            <div class="card-body">
+                <p><strong>Page ID:</strong> {{ page['id'] }}</p>
+
+                <!-- Insights Section -->
+                {% if page.insights and 'error' in page.insights %}
+                <p class="error-message">
+                    Error: {{ page.insights['error']['error_user_msg'] or page.insights['error']['message'] }}
+                </p>
+                {% elif page.insights %}
+                <h5>Page Insights</h5>
                 <div class="metric">
-                    <h4>Total Impressions</h4>
-                    <p>{{ page.insights['data'][0]['values'][0]['value'] if page.insights else "No Data Available" }}</p>
+                    <strong>Impressions:</strong> {{ page.insights['data'][0]['values'][0]['value'] }}
                 </div>
                 <div class="metric">
-                    <h4>Engaged Users</h4>
-                    <p>{{ page.insights['data'][1]['values'][0]['value'] if page.insights else "No Data Available" }}</p>
+                    <strong>Engaged Users:</strong> {{ page.insights['data'][1]['values'][0]['value'] }}
                 </div>
-                {% if page.monetization %}
-                <div class="metric">
-                    <h4>Revenue</h4>
-                    <p>$ {{ page.monetization['data'][0]['value'] }}</p>
-                </div>
-                {% else %}
-                <div class="metric">
-                    <h4>Revenue</h4>
-                    <p>No Data Available</p>
-                </div>
-                {% endif %}
-                <canvas id="insightsChart{{ page.id }}" class="my-4"></canvas>
+
+                <!-- Graph for Page Insights -->
+                <canvas id="insightsChart{{ page.id }}" class="my-4" style="max-width: 100%;"></canvas>
                 <script>
-                    const ctx{{ page.id }} = document.getElementById('insightsChart{{ page.id }}').getContext('2d');
-                    new Chart(ctx{{ page.id }}, {
+                    const ctx = document.getElementById("insightsChart{{ page.id }}").getContext('2d');
+                    const insightsChart = new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: ['Impressions', 'Engaged Users'],
                             datasets: [{
-                                label: '{{ page["name"] }} Insights',
+                                label: 'Insights Data',
                                 data: [
-                                    {{ page.insights['data'][0]['values'][0]['value'] if page.insights else 0 }},
-                                    {{ page.insights['data'][1]['values'][0]['value'] if page.insights else 0 }}
+                                    {{ page.insights['data'][0]['values'][0]['value'] }},
+                                    {{ page.insights['data'][1]['values'][0]['value'] }}
                                 ],
                                 backgroundColor: ['#4e54c8', '#8f94fb'],
+                                borderColor: ['#4e54c8', '#8f94fb'],
                                 borderWidth: 1
                             }]
                         },
@@ -153,52 +181,34 @@
                                 y: {
                                     beginAtZero: true
                                 }
-                            },
-                            animation: {
-                                duration: 1000
                             }
                         }
                     });
                 </script>
-                {% if page.posts and page.posts|length > 0 %}
-                <h4 class="mt-4">Post Insights</h4>
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Post ID</th>
-                                <th>Message</th>
-                                <th>Impressions</th>
-                                <th>Engaged Users</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for post in page.posts %}
-                            <tr>
-                                <td>{{ post.id }}</td>
-                                <td>{{ post.message if post.message else "No Message" }}</td>
-                                <td>{{ post.insights[0].values[0].value if post.insights else "No Data" }}</td>
-                                <td>{{ post.insights[1].values[0].value if post.insights else "No Data" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                {% endif %}
+
+                <!-- Monetization Section -->
+                {% if page.monetization and 'error' in page.monetization %}
+                <p class="error-message">
+                    Error: {{ page.monetization['error']['message'] }}
+                </p>
+                {% elif page.monetization %}
+                <h5>Monetization Data</h5>
+                <div class="metric">
+                    <strong>Revenue:</strong> {{ page.monetization['data'][0]['value'] }}
                 </div>
-                {% else %}
-                <p>No Post Data Available</p>
                 {% endif %}
             </div>
         </div>
-        {% endfor %}
         {% else %}
         <div class="alert alert-warning">
-            No Pages or data available. Please ensure permissions are granted or try again later.
+            No pages found. Please ensure you have the correct permissions and try again.
         </div>
-        {% endif %}
+        {% endfor %}
     </div>
 
     <div class="footer">
-        <p>&copy; 2025 Facebook Data Dashboard. Built with ❤️ for seamless insights.</p>
+        <p>&copy; 2025 Facebook Data Dashboard. Built with ❤️ by Abdullah</p>
     </div>
 
     <!-- Bootstrap 5 JS -->
