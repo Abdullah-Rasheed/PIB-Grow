@@ -113,37 +113,36 @@
             <div class="card-body">
                 <div class="metric">
                     <h4>Total Impressions</h4>
-                    <p>{{ page.insights['data'][0]['values'][0]['value'] if page.insights else "No Data Available" }}</p>
+                    <p>{{ page['insights'].get('page_impressions', 'No Data Available') }}</p>
                 </div>
                 <div class="metric">
                     <h4>Engaged Users</h4>
-                    <p>{{ page.insights['data'][1]['values'][0]['value'] if page.insights else "No Data Available" }}</p>
+                    <p>{{ page['insights'].get('page_engaged_users', 'No Data Available') }}</p>
                 </div>
-                {% if page.monetization %}
+                <div class="metric">
+                    <h4>New Fans</h4>
+                    <p>{{ page['insights'].get('page_fan_adds', 'No Data Available') }}</p>
+                </div>
                 <div class="metric">
                     <h4>Revenue</h4>
-                    <p>$ {{ page.monetization['data'][0]['value'] }}</p>
+                    <p>${{ page['monetization'].get('revenue', 'No Data Available') }}</p>
                 </div>
-                {% else %}
-                <div class="metric">
-                    <h4>Revenue</h4>
-                    <p>No Data Available</p>
-                </div>
-                {% endif %}
-                <canvas id="insightsChart{{ page.id }}" class="my-4"></canvas>
+
+                <canvas id="insightsChart{{ page['id'] }}" class="my-4"></canvas>
                 <script>
-                    const ctx{{ page.id }} = document.getElementById('insightsChart{{ page.id }}').getContext('2d');
-                    new Chart(ctx{{ page.id }}, {
+                    const ctx{{ page['id'] }} = document.getElementById('insightsChart{{ page['id'] }}').getContext('2d');
+                    new Chart(ctx{{ page['id'] }}, {
                         type: 'bar',
                         data: {
-                            labels: ['Impressions', 'Engaged Users'],
+                            labels: ['Impressions', 'Engaged Users', 'New Fans'],
                             datasets: [{
                                 label: '{{ page["name"] }} Insights',
                                 data: [
-                                    {{ page.insights['data'][0]['values'][0]['value'] if page.insights else 0 }},
-                                    {{ page.insights['data'][1]['values'][0]['value'] if page.insights else 0 }}
+                                    {{ page['insights'].get('page_impressions', 0) }},
+                                    {{ page['insights'].get('page_engaged_users', 0) }},
+                                    {{ page['insights'].get('page_fan_adds', 0) }}
                                 ],
-                                backgroundColor: ['#4e54c8', '#8f94fb'],
+                                backgroundColor: ['#4e54c8', '#8f94fb', '#ff9f40'],
                                 borderWidth: 1
                             }]
                         },
@@ -160,33 +159,6 @@
                         }
                     });
                 </script>
-                {% if page.posts and page.posts|length > 0 %}
-                <h4 class="mt-4">Post Insights</h4>
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Post ID</th>
-                                <th>Message</th>
-                                <th>Impressions</th>
-                                <th>Engaged Users</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for post in page.posts %}
-                            <tr>
-                                <td>{{ post.id }}</td>
-                                <td>{{ post.message if post.message else "No Message" }}</td>
-                                <td>{{ post.insights[0].values[0].value if post.insights else "No Data" }}</td>
-                                <td>{{ post.insights[1].values[0].value if post.insights else "No Data" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p>No Post Data Available</p>
-                {% endif %}
             </div>
         </div>
         {% endfor %}
