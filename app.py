@@ -15,7 +15,7 @@ load_dotenv()
 # Facebook App credentials
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
+REDIRECT_URI = "https://pib-grow.vercel.app/auth/callback"
 
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
@@ -42,29 +42,6 @@ DUMMY_PAGES = [
         "monetization": {
             "data": [{"value": 200.00}]
         },
-        "posts": [
-            {
-                "id": "101",
-                "message": "Welcome to Demo Page 1!",
-                "insights": [
-                    {"values": [{"value": 800}]},  # Impressions
-                    {"values": [{"value": 300}]}  # Engaged users
-                ]
-            }
-        ]
-    },
-    {
-        "id": "2",
-        "name": "Demo Page 2",
-        "insights": {
-            "data": [
-                {"values": [{"value": 1000}]},  # Total impressions
-                {"values": [{"value": 200}]}   # Engaged users
-            ]
-        },
-        "monetization": {
-            "data": [{"value": 120.00}]
-        },
         "posts": []
     }
 ]
@@ -76,30 +53,31 @@ def dashboard():
     if not access_token:
         return redirect("/auth/start")
 
-    # Fetch user info and pages
-    user_info = get_user_info(access_token)
-    pages = get_user_pages(access_token)
+    try:
+        # Fetch user info and pages
+        user_info = get_user_info(access_token)
+        pages = get_user_pages(access_token)
 
-    # Check for errors; if any, use dummy data
-    if "error" in user_info or "error" in pages:
-        user_info = DUMMY_USER
-        pages = {"data": DUMMY_PAGES}
+        # Check for errors; fallback to dummy data if necessary
+        if "error" in user_info or "error" in pages:
+            user_info = DUMMY_USER
+            pages = {"data": DUMMY_PAGES}
 
-    # Process insights and monetization data
-    for page in pages.get("data", []):
-        page_id = page["id"]
-        page["insights"] = get_page_engagement(access_token, page_id) or DUMMY_PAGES[0]["insights"]
-        page["monetization"] = get_page_ads_data(access_token, page_id) or DUMMY_PAGES[0]["monetization"]
-        page["posts"] = get_page_posts(access_token, page_id) or DUMMY_PAGES[0]["posts"]
+        # Process insights and monetization data
+        for page in pages.get("data", []):
+            page_id = page["id"]
+            page["insights"] = get_page_engagement(access_token, page_id) or DUMMY_PAGES[0]["insights"]
+            page["monetization"] = get_page_ads_data(access_token, page_id) or DUMMY_PAGES[0]["monetization"]
 
-    return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
-
+        return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+        return render_template("dashboard.html", user=DUMMY_USER, pages=DUMMY_PAGES, error=str(e))
 
 @app.route("/auth/start", methods=["GET"])
 def start_auth():
     """Redirect users to Facebook login."""
     return redirect(FB_AUTH_URL)
-
 
 @app.route("/auth/callback", methods=["GET"])
 def auth_callback():
@@ -124,7 +102,7 @@ def auth_callback():
     else:
         return jsonify({"error": data.get("error", "Unknown error")}), 400
 
-
+# Helper functions
 def get_user_info(access_token):
     """Fetch user profile information from Facebook."""
     try:
@@ -135,7 +113,6 @@ def get_user_info(access_token):
         logging.error(f"Error fetching user info: {e}")
         return {"error": "Failed to fetch user info"}
 
-
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
     try:
@@ -145,7 +122,6 @@ def get_user_pages(access_token):
     except Exception as e:
         logging.error(f"Error fetching user pages: {e}")
         return {"error": "Failed to fetch pages"}
-
 
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
@@ -159,7 +135,6 @@ def get_page_engagement(access_token, page_id):
         logging.error(f"Error fetching page engagement: {e}")
         return {}
 
-
 def get_page_ads_data(access_token, page_id):
     """Fetch monetization data for a given page."""
     try:
@@ -171,33 +146,5 @@ def get_page_ads_data(access_token, page_id):
         logging.error(f"Error fetching page ads data: {e}")
         return {}
 
-
-def get_page_posts(access_token, page_id):
-    """Fetch posts for a given page."""
-    try:
-        url = f"https://graph.facebook.com/{page_id}/posts?fields=id,message,insights.metric(post_impressions,post_engaged_users)&access_token={access_token}"
-        response = requests.get(url)
-        data = response.json()
-        return data.get("data", []) if "data" in data else []
-    except Exception as e:
-        logging.error(f"Error fetching page posts: {e}")
-        return []
-
-
-@app.route("/data-deletion", methods=["POST"])
-def data_deletion():
-    """Handle Facebook data deletion requests."""
-    body = request.json
-    if not body or "signed_request" not in body:
-        return jsonify({"error": "Invalid request"}), 400
-
-    response = {
-        "url": "https://pib-grow.vercel.app/",
-        "confirmation_code": "123456789"
-    }
-    return jsonify(response)
-
-
-# Expose the `app` object for deployment
 if __name__ == "__main__":
     app.run(debug=True)
