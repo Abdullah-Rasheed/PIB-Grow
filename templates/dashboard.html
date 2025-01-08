@@ -18,7 +18,7 @@
         .header {
             background: linear-gradient(135deg, #4e54c8, #8f94fb);
             color: white;
-            padding: 20px;
+            padding: 20px 0;
             text-align: center;
         }
 
@@ -35,7 +35,7 @@
             border: none;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
-            animation: slideIn 0.5s ease-in-out;
+            margin-bottom: 30px;
         }
 
         .card-header {
@@ -46,10 +46,23 @@
         }
 
         .metric {
-            padding: 10px;
             background-color: #f1f1f1;
             border-radius: 5px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metric h4 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #4e54c8;
+        }
+
+        .metric p {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
         }
 
         .error-message {
@@ -72,25 +85,11 @@
             text-decoration: underline;
         }
 
-        /* Animations */
         @keyframes fadeIn {
             0% {
                 opacity: 0;
             }
-
             100% {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideIn {
-            0% {
-                transform: translateY(50px);
-                opacity: 0;
-            }
-
-            100% {
-                transform: translateY(0);
                 opacity: 1;
             }
         }
@@ -100,27 +99,31 @@
 <body>
     <div class="header">
         <h1>Welcome, {{ user['name'] }}</h1>
-        <p>Your personalized dashboard for Facebook insights and monetization data</p>
+        <p>Analyze your Facebook Page performance metrics and monetization data</p>
     </div>
 
     <div class="container">
+        {% if pages %}
         {% for page in pages %}
-        <div class="page card mb-4">
+        <div class="card">
             <div class="card-header">
-                <h2>Page: {{ page['name'] }}</h2>
+                <h2>{{ page['name'] }}</h2>
             </div>
             <div class="card-body">
-                <p><strong>Page ID:</strong> {{ page['id'] }}</p>
-
-                <!-- Insights Section -->
-                {% if page.insights %}
-                <h5>Page Insights</h5>
                 <div class="metric">
-                    <strong>Impressions:</strong> {{ page.insights['data'][0]['values'][0]['value'] }}
+                    <h4>Total Impressions</h4>
+                    <p>{{ page.insights['data'][0]['values'][0]['value'] }}</p>
                 </div>
                 <div class="metric">
-                    <strong>Engaged Users:</strong> {{ page.insights['data'][1]['values'][0]['value'] }}
+                    <h4>Engaged Users</h4>
+                    <p>{{ page.insights['data'][1]['values'][0]['value'] }}</p>
                 </div>
+                {% if page.monetization %}
+                <div class="metric">
+                    <h4>Revenue</h4>
+                    <p>$ {{ page.monetization['data'][0]['value'] }}</p>
+                </div>
+                {% endif %}
                 <canvas id="insightsChart{{ page.id }}" class="my-4"></canvas>
                 <script>
                     const ctx{{ page.id }} = document.getElementById('insightsChart{{ page.id }}').getContext('2d');
@@ -129,7 +132,7 @@
                         data: {
                             labels: ['Impressions', 'Engaged Users'],
                             datasets: [{
-                                label: 'Insights Data',
+                                label: '{{ page["name"] }} Insights',
                                 data: [
                                     {{ page.insights['data'][0]['values'][0]['value'] }},
                                     {{ page.insights['data'][1]['values'][0]['value'] }}
@@ -144,23 +147,15 @@
                                 y: {
                                     beginAtZero: true
                                 }
+                            },
+                            animation: {
+                                duration: 1000
                             }
                         }
                     });
                 </script>
-                {% endif %}
-
-                <!-- Monetization Section -->
-                {% if page.monetization %}
-                <h5>Monetization Data</h5>
-                <div class="metric">
-                    <strong>Revenue:</strong> ${{ page.monetization['data'][0]['value'] }}
-                </div>
-                {% endif %}
-
-                <!-- Post-Level Insights Section -->
                 {% if page.posts %}
-                <h5>Post Insights</h5>
+                <h4 class="mt-4">Post Insights</h4>
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
@@ -187,10 +182,15 @@
             </div>
         </div>
         {% endfor %}
+        {% else %}
+        <div class="alert alert-warning">
+            No Pages or data available. Please ensure permissions are granted and try again.
+        </div>
+        {% endif %}
     </div>
 
     <div class="footer">
-        <p>&copy; 2025 Facebook Data Dashboard. Built with ❤️ by Abdullah</p>
+        <p>&copy; 2025 Facebook Data Dashboard. Built with ❤️ for seamless insights.</p>
     </div>
 
     <!-- Bootstrap 5 JS -->
