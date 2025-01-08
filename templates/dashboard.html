@@ -7,8 +7,6 @@
     <title>Dashboard</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js for graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -20,13 +18,13 @@
         .header {
             background: linear-gradient(135deg, #4e54c8, #8f94fb);
             color: white;
-            padding: 20px 0;
+            padding: 20px;
             text-align: center;
-            animation: fadeIn 1s ease-in-out;
         }
 
         .header h1 {
             font-size: 2.5rem;
+            animation: fadeIn 1.5s ease-in-out;
         }
 
         .container {
@@ -96,44 +94,16 @@
                 opacity: 1;
             }
         }
-
-        /* Dark mode */
-        .dark-mode {
-            background-color: #121212;
-            color: white;
-        }
-
-        .dark-mode .header {
-            background: linear-gradient(135deg, #1e1e1e, #3a3a3a);
-        }
     </style>
 </head>
 
 <body>
     <div class="header">
         <h1>Welcome, {{ user['name'] }}</h1>
-        <p>View your page insights and performance metrics</p>
+        <p>Your personalized dashboard for Facebook insights and monetization data</p>
     </div>
 
     <div class="container">
-        <div class="user-info card mb-4">
-            <div class="card-header">
-                <h2>Your Profile</h2>
-            </div>
-            <div class="card-body">
-                <p><strong>User ID:</strong> {{ user['id'] }}</p>
-            </div>
-        </div>
-
-        <div class="debug-info card mb-4">
-            <div class="card-header">
-                <h3>Debugging Info</h3>
-            </div>
-            <div class="card-body">
-                <pre>{{ pages | tojson(indent=2) }}</pre>
-            </div>
-        </div>
-
         {% for page in pages %}
         <div class="page card mb-4">
             <div class="card-header">
@@ -143,11 +113,7 @@
                 <p><strong>Page ID:</strong> {{ page['id'] }}</p>
 
                 <!-- Insights Section -->
-                {% if page.insights and 'error' in page.insights %}
-                <p class="error-message">
-                    Error: {{ page.insights['error']['error_user_msg'] or page.insights['error']['message'] }}
-                </p>
-                {% elif page.insights %}
+                {% if page.insights %}
                 <h5>Page Insights</h5>
                 <div class="metric">
                     <strong>Impressions:</strong> {{ page.insights['data'][0]['values'][0]['value'] }}
@@ -155,12 +121,10 @@
                 <div class="metric">
                     <strong>Engaged Users:</strong> {{ page.insights['data'][1]['values'][0]['value'] }}
                 </div>
-
-                <!-- Graph for Page Insights -->
-                <canvas id="insightsChart{{ page.id }}" class="my-4" style="max-width: 100%;"></canvas>
+                <canvas id="insightsChart{{ page.id }}" class="my-4"></canvas>
                 <script>
-                    const ctx = document.getElementById("insightsChart{{ page.id }}").getContext('2d');
-                    const insightsChart = new Chart(ctx, {
+                    const ctx{{ page.id }} = document.getElementById('insightsChart{{ page.id }}').getContext('2d');
+                    new Chart(ctx{{ page.id }}, {
                         type: 'bar',
                         data: {
                             labels: ['Impressions', 'Engaged Users'],
@@ -171,7 +135,6 @@
                                     {{ page.insights['data'][1]['values'][0]['value'] }}
                                 ],
                                 backgroundColor: ['#4e54c8', '#8f94fb'],
-                                borderColor: ['#4e54c8', '#8f94fb'],
                                 borderWidth: 1
                             }]
                         },
@@ -188,21 +151,40 @@
                 {% endif %}
 
                 <!-- Monetization Section -->
-                {% if page.monetization and 'error' in page.monetization %}
-                <p class="error-message">
-                    Error: {{ page.monetization['error']['message'] }}
-                </p>
-                {% elif page.monetization %}
+                {% if page.monetization %}
                 <h5>Monetization Data</h5>
                 <div class="metric">
-                    <strong>Revenue:</strong> {{ page.monetization['data'][0]['value'] }}
+                    <strong>Revenue:</strong> ${{ page.monetization['data'][0]['value'] }}
+                </div>
+                {% endif %}
+
+                <!-- Post-Level Insights Section -->
+                {% if page.posts %}
+                <h5>Post Insights</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Post ID</th>
+                                <th>Message</th>
+                                <th>Impressions</th>
+                                <th>Engaged Users</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for post in page.posts %}
+                            <tr>
+                                <td>{{ post.id }}</td>
+                                <td>{{ post.message | truncate(50) }}</td>
+                                <td>{{ post.insights[0].values[0].value }}</td>
+                                <td>{{ post.insights[1].values[0].value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
                 {% endif %}
             </div>
-        </div>
-        {% else %}
-        <div class="alert alert-warning">
-            No pages found. Please ensure you have the correct permissions and try again.
         </div>
         {% endfor %}
     </div>
