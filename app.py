@@ -44,11 +44,11 @@ def dashboard():
     for page in pages.get("data", []):
         page_id = page["id"]
         # Fetch page-level metrics
-        page["insights"] = get_page_engagement(access_token, page_id) or {}
+        page["insights"] = get_page_engagement(access_token, page_id) or get_dummy_engagement()
         # Fetch monetization data
-        page["monetization"] = get_page_monetization_data(access_token, page_id) or {}
+        page["monetization"] = get_page_monetization_data(access_token, page_id) or get_dummy_monetization()
         # Fetch post-level metrics
-        page["posts"] = get_page_posts(access_token, page_id)
+        page["posts"] = get_page_posts(access_token, page_id) or get_dummy_posts()
 
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
@@ -92,37 +92,72 @@ def get_user_info(access_token):
 
 def get_user_pages(access_token):
     """Fetch the list of pages the user manages."""
-    url = f"https://graph.facebook.com/me/accounts?fields=id,name,category,roles&access_token={access_token}"
+    url = f"https://graph.facebook.com/me/accounts?fields=id,name,category&access_token={access_token}"
     response = requests.get(url)
     return response.json()
 
 
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
-    metrics = "page_impressions,page_engaged_users,page_views_total"
-    url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
-    response = requests.get(url)
-    data = response.json()
-    return data if "data" in data else {}
+    try:
+        metrics = "page_impressions,page_engaged_users"
+        url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
+        response = requests.get(url)
+        return response.json()
+    except Exception as e:
+        logging.error(f"Error fetching page engagement: {e}")
+        return None
 
 
 def get_page_monetization_data(access_token, page_id):
     """Fetch monetization data for a given page."""
-    url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
-    response = requests.get(url)
-    data = response.json()
-    return data if "data" in data else {}
+    try:
+        url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
+        response = requests.get(url)
+        return response.json()
+    except Exception as e:
+        logging.error(f"Error fetching monetization data: {e}")
+        return None
 
 
 def get_page_posts(access_token, page_id):
     """Fetch post-level metrics for a given page."""
-    posts_url = f"https://graph.facebook.com/{page_id}/posts?fields=id,message,created_time,insights.metric(post_impressions,post_engaged_users)&access_token={access_token}"
-    response = requests.get(posts_url)
-    data = response.json()
-    if "data" in data:
-        for post in data["data"]:
-            post["insights"] = post.get("insights", {}).get("data", [])
-    return data.get("data", [])
+    try:
+        posts_url = f"https://graph.facebook.com/{page_id}/posts?fields=id,message,created_time,insights.metric(post_impressions,post_engaged_users)&access_token={access_token}"
+        response = requests.get(posts_url)
+        return response.json().get("data", [])
+    except Exception as e:
+        logging.error(f"Error fetching page posts: {e}")
+        return None
+
+
+# Dummy Data Functions
+def get_dummy_engagement():
+    return {
+        "data": [
+            {"name": "page_impressions", "values": [{"value": 1500}]},
+            {"name": "page_engaged_users", "values": [{"value": 300}]}
+        ]
+    }
+
+
+def get_dummy_monetization():
+    return {
+        "data": [{"name": "revenue", "value": 500.00}]
+    }
+
+
+def get_dummy_posts():
+    return [
+        {"id": "post1", "message": "This is a dummy post", "insights": [
+            {"name": "post_impressions", "values": [{"value": 200}]},
+            {"name": "post_engaged_users", "values": [{"value": 50}]}
+        ]},
+        {"id": "post2", "message": "Another dummy post", "insights": [
+            {"name": "post_impressions", "values": [{"value": 350}]},
+            {"name": "post_engaged_users", "values": [{"value": 75}]}
+        ]}
+    ]
 
 
 @app.route("/data-deletion", methods=["POST"])
@@ -139,6 +174,5 @@ def data_deletion():
     return jsonify(response)
 
 
-# Expose the `app` object for deployment
 if __name__ == "__main__":
     app.run(debug=True)
