@@ -21,7 +21,7 @@ REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-app-url/auth/callback")
 FB_AUTH_URL = (
     f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
     f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
-    f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
+    f"pages_manage_metadata,read_insights,pages_manage_ads,ads_read"
 )
 
 # Configure logging
@@ -34,24 +34,22 @@ def dashboard():
     if not access_token:
         return redirect("/auth/start")
 
+    # Fetch user info
     user_info = get_user_info(access_token)
     if "error" in user_info:
         return render_template("error.html", error=user_info["error"])
 
-    # Log the access token and user data
-    logging.debug(f"Access Token: {access_token}")
-    logging.debug(f"User Info: {user_info}")
-
+    # Fetch pages and their insights
     pages = get_user_pages(access_token)
-    logging.debug(f"Pages Data: {pages}")  # Log the pages data to check what's returned
-
-    # Initialize pages with empty insights and monetization if missing
     for page in pages.get("data", []):
         page_id = page["id"]
+        # Fetch page-level metrics
         page["insights"] = get_page_engagement(access_token, page_id) or {}
-        page["monetization"] = get_page_ads_data(access_token, page_id) or {}
+        # Fetch monetization data
+        page["monetization"] = get_page_monetization_data(access_token, page_id) or {}
+        # Fetch post-level metrics
+        page["posts"] = get_page_posts(access_token, page_id)
 
-    # Render the dashboard with pages data, ensuring empty data doesn't break the frontend
     return render_template("dashboard.html", user=user_info, pages=pages.get("data", []))
 
 
@@ -101,26 +99,30 @@ def get_user_pages(access_token):
 
 def get_page_engagement(access_token, page_id):
     """Fetch engagement data for a given page."""
-    metrics = "page_impressions,page_engaged_users,page_fan_adds"
+    metrics = "page_impressions,page_engaged_users,page_views_total"
     url = f"https://graph.facebook.com/{page_id}/insights?metric={metrics}&access_token={access_token}"
     response = requests.get(url)
     data = response.json()
-    # Handle empty or error responses from Facebook
-    if "data" in data:
-        return data
-    else:
-        return {}
+    return data if "data" in data else {}
 
-def get_page_ads_data(access_token, page_id):
+
+def get_page_monetization_data(access_token, page_id):
     """Fetch monetization data for a given page."""
     url = f"https://graph.facebook.com/{page_id}/monetized_data?access_token={access_token}"
     response = requests.get(url)
     data = response.json()
-    # Handle empty or error responses from Facebook
+    return data if "data" in data else {}
+
+
+def get_page_posts(access_token, page_id):
+    """Fetch post-level metrics for a given page."""
+    posts_url = f"https://graph.facebook.com/{page_id}/posts?fields=id,message,created_time,insights.metric(post_impressions,post_engaged_users)&access_token={access_token}"
+    response = requests.get(posts_url)
+    data = response.json()
     if "data" in data:
-        return data
-    else:
-        return {}
+        for post in data["data"]:
+            post["insights"] = post.get("insights", {}).get("data", [])
+    return data.get("data", [])
 
 
 @app.route("/data-deletion", methods=["POST"])
