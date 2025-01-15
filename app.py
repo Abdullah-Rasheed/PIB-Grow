@@ -1,83 +1,42 @@
-import os
-from flask import Flask, request, redirect, render_template
-from flask_cors import CORS
-import requests
-import logging
-from dotenv import load_dotenv
+from flask import Flask, render_template, send_from_directory, abort
 
-# Initialize the Flask app
-app = Flask(__name__, template_folder="pages")
-CORS(app)
+app = Flask(__name__, static_folder='assets', template_folder='pages')
 
-# Load environment variables from a .env file
-load_dotenv()
+# Route for specific pages
+@app.route('/')
+@app.route('/sign-up')
+def sign_up():
+    return render_template('sign-up.html')
 
-# Facebook App credentials
-FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
-FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = "https://pib-grow.vercel.app/auth/callback"
+@app.route('/sign-in')
+def sign_in():
+    return render_template('sign-in.html')
 
-# Facebook OAuth URL configuration
-FB_AUTH_URL = (
-    f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
-    f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
-    f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
-)
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-
-@app.route("/")
+@app.route('/dashboard')
 def dashboard():
-    """Render the dashboard template after login."""
-    access_token = request.args.get("access_token")
-    if not access_token:
-        return redirect("/auth/start")
+    return render_template('dashboard.html')
 
-    # Render the dashboard without fetching any data
-    return render_template("dashboard.html")
+@app.route('/partners')
+def partners():
+    return render_template('partners.html')
 
-@app.route("/auth/start", methods=["GET"])
-def start_auth():
-    """Redirect users to Facebook login."""
-    return redirect(FB_AUTH_URL)
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
 
-@app.route("/auth/callback", methods=["GET"])
-def auth_callback():
-    """Handle the callback and exchange code for access token."""
-    code = request.args.get("code")
-    if not code:
-        return "Authorization code not found", 400
+@app.route('/accounting')
+def accounting():
+    return render_template('accounting.html')
 
-    token_url = "https://graph.facebook.com/v17.0/oauth/access_token"
-    params = {
-        "client_id": FACEBOOK_APP_ID,
-        "redirect_uri": REDIRECT_URI,
-        "client_secret": FACEBOOK_APP_SECRET,
-        "code": code,
-    }
-    response = requests.get(token_url, params=params)
-    data = response.json()
+@app.route('/reports')
+def reports():
+    return render_template('reports.html')
 
-    if "access_token" in data:
-        access_token = data["access_token"]
-        return redirect(f"/?access_token={access_token}")
-    else:
-        return "Error exchanging token", 400
+# Serve static assets
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory(app.static_folder, filename)
 
-@app.route("/data-deletion", methods=["POST"])
-def data_deletion():
-    """Handle Facebook data deletion requests."""
-    body = request.json
-    if not body or "signed_request" not in body:
-        return "Invalid request", 400
-
-    response = {
-        "url": "https://pib-grow.vercel.app/",
-        "confirmation_code": "123456789"
-    }
-    return response
-
-# Expose the `app` object for deployment
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
