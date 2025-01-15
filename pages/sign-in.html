@@ -64,6 +64,15 @@
                       <button type="submit" class="btn btn-lg btn-primary btn-lg w-100 mt-4 mb-0">Sign in</button>
                     </div>
                   </form>
+                  {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                      <div class="alert alert-warning">
+                        {% for category, message in messages %}
+                          <p>{{ message }}</p>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  {% endwith %}
                 </div>
                 <div class="card-footer text-center pt-0 px-lg-2 px-1">
                   <p class="mb-4 text-sm mx-auto">Don't have an account? <a href="/sign-up" class="text-primary text-gradient font-weight-bold">Sign up</a></p>
@@ -75,31 +84,6 @@
       </div>
     </section>
   </main>
-
-  <script>
-    document.getElementById('signinForm').onsubmit = function(event) {
-        event.preventDefault();
-        let username = document.querySelector('input[name="username"]').value;
-        let password = document.querySelector('input[name="password"]').value;
-
-        fetch('/sign-in', {
-            method: 'POST',
-            body: new URLSearchParams({
-                'username': username,
-                'password': password
-            }),
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = "/dashboard"; // Redirect after successful login
-            } else {
-                alert('Invalid credentials. Please try again.');
-            }
-        })
-        .catch(error => alert('An error occurred: ' + error.message));
-    };
-  </script>
 
   <script src="../assets/js/core/popper.min.js"></script>
   <script src="../assets/js/core/bootstrap.min.js"></script>
