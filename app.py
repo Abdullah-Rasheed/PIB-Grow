@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, redirect, render_template, send_from_directory, abort, session, url_for, flash
 from flask_cors import CORS
 from flask_session import Session
+from functools import wraps
 import logging
 from dotenv import load_dotenv
 
@@ -20,7 +21,7 @@ load_dotenv()
 # Facebook App credentials
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = "https://pib-grow.vercel.app/auth/callback"  # Updated for local testing
+REDIRECT_URI = "https://pib-grow.vercel.app/auth/callback"
 
 # Facebook OAuth URL configuration
 FB_AUTH_URL = (
@@ -36,14 +37,19 @@ TEST_USER = {"username": "testuser", "password": "testpassword"}
 logging.basicConfig(level=logging.DEBUG)
 
 
-# Landing page (Sign-In)
-@app.route("/")
-@app.route("/sign-in")
-def sign_up():
-    return render_template("sign-in.html")
+# Protect routes decorator
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if "user" not in session:
+            flash("Please log in to access this page.", "warning")
+            return redirect(url_for("sign_in"))
+        return func(*args, **kwargs)
+    return wrapper
 
 
-# Login route
+# Sign-In page and form handling
+@app.route("/", methods=["GET", "POST"])
 @app.route("/sign-in", methods=["GET", "POST"])
 def sign_in():
     if request.method == "POST":
@@ -62,37 +68,8 @@ def sign_in():
 @app.route("/logout")
 def logout():
     session.pop("user", None)
+    flash("You have been logged out.", "info")
     return redirect(url_for("sign_in"))
-
-
-# Protect routes decorator
-def login_required(func):
-    def wrapper(*args, **kwargs):
-        if "user" not in session:
-            flash("Please log in to access this page.", "warning")
-            return redirect(url_for("sign_in"))
-        return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
-    return wrapper
-
-
-# Facebook OAuth start route
-@app.route("/auth/start", methods=["GET"])
-def start_auth():
-    """Redirect users to Facebook login."""
-    return redirect(FB_AUTH_URL)
-
-
-# Facebook OAuth callback route
-@app.route("/auth/callback", methods=["GET"])
-def auth_callback():
-    """Handle the callback and simulate a successful OAuth process."""
-    code = request.args.get("code")
-    if not code:
-        return "Authorization code not found", 400
-
-    # Simulate successful login and redirect to the dashboard
-    return redirect("/dashboard")
 
 
 # Dashboard route
@@ -102,7 +79,7 @@ def dashboard():
     return render_template("dashboard.html")
 
 
-# Other pages (protected by login)
+# Other protected pages
 @app.route("/partners")
 @login_required
 def partners():
@@ -142,6 +119,26 @@ def serve_assets(filename):
 def favicon():
     """Serve the favicon if requested."""
     return send_from_directory(app.static_folder, "favicon.ico")
+
+
+# Facebook OAuth start route
+@app.route("/auth/start", methods=["GET"])
+def start_auth():
+    """Redirect users to Facebook login."""
+    return redirect(FB_AUTH_URL)
+
+
+# Facebook OAuth callback route
+@app.route("/auth/callback", methods=["GET"])
+def auth_callback():
+    """Handle the callback and simulate a successful OAuth process."""
+    code = request.args.get("code")
+    if not code:
+        return "Authorization code not found", 400
+
+    # Simulate successful login and redirect to the dashboard
+    session["user"] = "facebook_user"  # Simulate user session from Facebook login
+    return redirect(url_for("dashboard"))
 
 
 # Handle Facebook data deletion
