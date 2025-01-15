@@ -12,7 +12,7 @@ CORS(app)
 
 # Configure secret key and session
 app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
-app.config["SESSION_TYPE"] = "filesystem"  # Consider using Redis in a serverless environment
+app.config["SESSION_TYPE"] = "filesystem"  # If deploying on Vercel, consider using Redis instead
 Session(app)
 
 # Load environment variables from a .env file
@@ -43,11 +43,17 @@ def sign_in():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+        
+        # Debugging log
+        app.logger.debug(f"Attempting login with username: {username}")
+
         if username == TEST_USER["username"] and password == TEST_USER["password"]:
             session["user"] = username
-            return redirect(url_for("dashboard"))  # Proper redirect after login
+            app.logger.debug(f"User {username} logged in successfully.")  # Debugging log
+            return redirect(url_for("dashboard"))  # Redirect to dashboard after login
         else:
             flash("Invalid credentials. Please try again.", "error")
+            app.logger.debug(f"Failed login attempt for {username}.")  # Debugging log
             return redirect(url_for("sign_in"))
     return render_template("sign-in.html")
 
