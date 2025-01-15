@@ -1,5 +1,5 @@
 import os
-from flask import Flask, redirect, render_template, url_for, flash
+from flask import Flask, request, redirect, render_template, url_for, flash
 from flask_cors import CORS
 import logging
 from dotenv import load_dotenv
@@ -16,11 +16,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 # Landing page (Sign-In)
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 @app.route("/sign-in", methods=["GET", "POST"])
 def sign_in():
     if request.method == "POST":
-        # Directly redirect to dashboard on form submit (without session handling)
+        # On form submit, directly redirect to the dashboard
         return redirect(url_for("dashboard"))
     return render_template("sign-in.html")
 
