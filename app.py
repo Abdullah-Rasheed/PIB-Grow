@@ -12,7 +12,7 @@ CORS(app)
 
 # Configure secret key and session
 app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
-app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_TYPE"] = "filesystem"  # Consider using Redis in a serverless environment
 Session(app)
 
 # Load environment variables from a .env file
@@ -45,7 +45,7 @@ def sign_in():
         password = request.form.get("password")
         if username == TEST_USER["username"] and password == TEST_USER["password"]:
             session["user"] = username
-            return redirect(url_for("dashboard"))  # Redirect to dashboard after login
+            return redirect(url_for("dashboard"))  # Proper redirect after login
         else:
             flash("Invalid credentials. Please try again.", "error")
             return redirect(url_for("sign_in"))
