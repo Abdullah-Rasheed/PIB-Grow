@@ -8,11 +8,6 @@ app = Flask(__name__, static_folder='assets', template_folder='pages')
 def sign_up():
     return render_template('sign-up.html')
 
-@app.route('/sign-in')
-def sign_in():
-    return render_template('sign-in.html')
-
-
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
