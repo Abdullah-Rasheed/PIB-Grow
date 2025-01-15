@@ -18,18 +18,6 @@ Session(app)
 # Load environment variables from a .env file
 load_dotenv()
 
-# Facebook App credentials
-FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
-FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
-REDIRECT_URI = "https://pib-grow.vercel.app/auth/callback"
-
-# Facebook OAuth URL configuration
-FB_AUTH_URL = (
-    f"https://www.facebook.com/v17.0/dialog/oauth?client_id={FACEBOOK_APP_ID}"
-    f"&redirect_uri={REDIRECT_URI}&scope=pages_show_list,pages_read_engagement,"
-    f"business_management,ads_read,pages_manage_metadata,read_insights,pages_manage_cta,pages_manage_ads"
-)
-
 # Test user credentials
 TEST_USER = {"username": "testuser", "password": "testpassword"}
 
@@ -57,7 +45,7 @@ def sign_in():
         password = request.form.get("password")
         if username == TEST_USER["username"] and password == TEST_USER["password"]:
             session["user"] = username
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("dashboard"))  # Redirect to dashboard after login
         else:
             flash("Invalid credentials. Please try again.", "error")
             return redirect(url_for("sign_in"))
@@ -119,41 +107,6 @@ def serve_assets(filename):
 def favicon():
     """Serve the favicon if requested."""
     return send_from_directory(app.static_folder, "favicon.ico")
-
-
-# Facebook OAuth start route
-@app.route("/auth/start", methods=["GET"])
-def start_auth():
-    """Redirect users to Facebook login."""
-    return redirect(FB_AUTH_URL)
-
-
-# Facebook OAuth callback route
-@app.route("/auth/callback", methods=["GET"])
-def auth_callback():
-    """Handle the callback and simulate a successful OAuth process."""
-    code = request.args.get("code")
-    if not code:
-        return "Authorization code not found", 400
-
-    # Simulate successful login and redirect to the dashboard
-    session["user"] = "facebook_user"  # Simulate user session from Facebook login
-    return redirect(url_for("dashboard"))
-
-
-# Handle Facebook data deletion
-@app.route("/data-deletion", methods=["POST"])
-def data_deletion():
-    """Handle Facebook data deletion requests."""
-    body = request.json
-    if not body or "signed_request" not in body:
-        return "Invalid request", 400
-
-    response = {
-        "url": "https://pib-grow.vercel.app/",
-        "confirmation_code": "123456789",
-    }
-    return response
 
 
 # Handle 404 errors gracefully
