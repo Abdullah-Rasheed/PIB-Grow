@@ -20,8 +20,16 @@ logging.basicConfig(level=logging.DEBUG)
 @app.route("/sign-in", methods=["GET", "POST"])
 def sign_in():
     if request.method == "POST":
-        # On form submit, directly redirect to the dashboard
-        return redirect(url_for("dashboard"))
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        # Example validation (replace with actual authentication logic)
+        if username == "admin" and password == "password":
+            return redirect(url_for("dashboard"))
+        else:
+            flash("Invalid credentials. Please try again.", "error")
+            return redirect(url_for("sign_in"))
+
     return render_template("sign-in.html")
 
 
