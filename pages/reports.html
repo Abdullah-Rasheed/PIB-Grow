@@ -253,130 +253,212 @@
               <div class="container">
                 <h5>Financial Reports</h5>
                 <form id="financial-report-form" class="financial-form">
-                    <div class="form-group">
-                        <label for="facebook-revenue">Facebook Revenue Data (All Pages):</label>
-                        <input type="text" id="facebook-revenue" name="facebook-revenue" placeholder="Auto-filled" readonly>
+                  <div class="form-group">
+                    <label for="page-selection">Select Pages:</label>
+                    <div class="modern-checkbox-dropdown">
+                      <label class="checkbox-item">
+                        <input type="checkbox" value="Page1" class="page-checkbox"> Page 1
+                      </label>
+                      <label class="checkbox-item">
+                        <input type="checkbox" value="Page2" class="page-checkbox"> Page 2
+                      </label>
+                      <label class="checkbox-item">
+                        <input type="checkbox" value="Page3" class="page-checkbox"> Page 3
+                      </label>
+                      <label class="checkbox-item">
+                        <input type="checkbox" value="Page4" class="page-checkbox"> Page 4
+                      </label>
+                      <label class="checkbox-item">
+                        <input type="checkbox" value="Page5" class="page-checkbox"> Page 5
+                      </label>
                     </div>
-                    <div class="form-group">
-                        <label for="summed-revenue">Summed Revenue Totals:</label>
-                        <input type="text" id="summed-revenue" name="summed-revenue" placeholder="Auto-filled" readonly>
-                    </div>
-            
-                    <h5>Manual Data Input Fields</h5>
-                    <div class="form-group">
-                        <label for="operational-costs">Operational Costs:</label>
-                        <input type="number" id="operational-costs" name="operational-costs" placeholder="Enter operational costs">
-                    </div>
-                    <div class="form-group">
-                        <label for="partner-fees">Partner-Specific Fees/Adjustments:</label>
-                        <input type="number" id="partner-fees" name="partner-fees" placeholder="Enter partner-specific fees">
-                    </div>
-                    <div class="form-group">
-                        <label for="other-costs">Other Accounting-Related Data:</label>
-                        <input type="number" id="other-costs" name="other-costs" placeholder="Enter other accounting-related data">
-                    </div>
-            
-                    <h5>Customizable Formulas</h5>
-                    <div class="form-group">
-                        <label for="custom-formula">Custom Formula:</label>
-                        <textarea id="custom-formula" name="custom-formula" rows="3" placeholder="Enter custom formula here"></textarea>
-                    </div>
-            
-                    <h5>Partner-Specific Formulas and Fields</h5>
-                    <div class="form-group">
-                        <label for="partner-specific-formula">Partner-Specific Formula:</label>
-                        <textarea id="partner-specific-formula" name="partner-specific-formula" rows="3" placeholder="Enter partner-specific formula here"></textarea>
-                    </div>
-            
-                    <div class="form-group">
-                        <label for="net-revenue">Net Revenue (Calculated):</label>
-                        <input type="text" id="net-revenue" name="net-revenue" placeholder="Auto-calculated" readonly>
-                    </div>
-            
-                    <button type="button" class="btn-calculate" onclick="calculateNetRevenue()">Calculate Net Revenue</button>
+                    <button type="button" id="select-all" class="btn-small">Select All</button>
+                    <button type="button" id="deselect-all" class="btn-small">Deselect All</button>
+                  </div>
+                  <div class="form-group">
+                    <label for="facebook-revenue">Facebook Revenue Data (Selected Pages):</label>
+                    <input type="text" id="facebook-revenue" name="facebook-revenue" placeholder="Auto-filled" readonly>
+                  </div>
+                  <div class="form-group">
+                    <label for="summed-revenue">Summed Revenue Totals:</label>
+                    <input type="text" id="summed-revenue" name="summed-revenue" placeholder="Auto-filled" readonly>
+                  </div>
+    
+                  <h5>Manual Data Input Fields</h5>
+                  <div class="form-group">
+                    <label for="operational-costs">Operational Costs:</label>
+                    <input type="number" id="operational-costs" name="operational-costs" placeholder="Enter operational costs">
+                  </div>
+                  <div class="form-group">
+                    <label for="partner-fees">Partner-Specific Fees/Adjustments:</label>
+                    <input type="number" id="partner-fees" name="partner-fees" placeholder="Enter partner-specific fees">
+                  </div>
+                  <div class="form-group">
+                    <label for="other-costs">Other Accounting-Related Data:</label>
+                    <input type="number" id="other-costs" name="other-costs" placeholder="Enter other accounting-related data">
+                  </div>
+    
+                  <h5>Customizable Formulas</h5>
+                  <div class="form-group">
+                    <label for="custom-formula">Custom Formula:</label>
+                    <textarea id="custom-formula" name="custom-formula" rows="3" placeholder="Enter custom formula here"></textarea>
+                  </div>
+    
+                  <h5>Partner-Specific Formulas and Fields</h5>
+                  <div class="form-group">
+                    <label for="partner-specific-formula">Partner-Specific Formula:</label>
+                    <textarea id="partner-specific-formula" name="partner-specific-formula" rows="3" placeholder="Enter partner-specific formula here"></textarea>
+                  </div>
+    
+                  <div class="form-group">
+                    <label for="net-revenue">Net Revenue (Calculated):</label>
+                    <input type="text" id="net-revenue" name="net-revenue" placeholder="Auto-calculated" readonly>
+                  </div>
+    
+                  <button type="button" class="btn-calculate" onclick="calculateNetRevenue()">Calculate Net Revenue</button>
+                  <button type="button" class="btn-download" onclick="downloadInvoice()">Download Invoice</button>
                 </form>
-            </div>
-            
-            <script>
-                function calculateNetRevenue() {
+    
+                <script>
+                  const dummyData = {
+                    Page1: 1000,
+                    Page2: 1500,
+                    Page3: 1200,
+                    Page4: 800,
+                    Page5: 2000
+                  };
+    
+                  document.querySelectorAll('.page-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateRevenue);
+                  });
+    
+                  document.getElementById('select-all').addEventListener('click', () => {
+                    document.querySelectorAll('.page-checkbox').forEach(checkbox => {
+                      checkbox.checked = true;
+                    });
+                    updateRevenue();
+                  });
+    
+                  document.getElementById('deselect-all').addEventListener('click', () => {
+                    document.querySelectorAll('.page-checkbox').forEach(checkbox => {
+                      checkbox.checked = false;
+                    });
+                    updateRevenue();
+                  });
+    
+                  function updateRevenue() {
+                    const selectedPages = Array.from(document.querySelectorAll('.page-checkbox:checked')).map(checkbox => checkbox.value);
+                    const totalRevenue = selectedPages.reduce((sum, page) => sum + (dummyData[page] || 0), 0);
+                    document.getElementById('facebook-revenue').value = totalRevenue;
+                    document.getElementById('summed-revenue').value = totalRevenue;
+                  }
+    
+                  function calculateNetRevenue() {
                     const operationalCosts = parseFloat(document.getElementById('operational-costs').value) || 0;
                     const partnerFees = parseFloat(document.getElementById('partner-fees').value) || 0;
                     const otherCosts = parseFloat(document.getElementById('other-costs').value) || 0;
                     const facebookRevenue = parseFloat(document.getElementById('facebook-revenue').value) || 0;
-            
-                    // Example: Simple formula to calculate net revenue
+    
                     const netRevenue = facebookRevenue - (operationalCosts + partnerFees + otherCosts);
-            
                     document.getElementById('net-revenue').value = netRevenue.toFixed(2);
-                }
-            </script>
-            
-            <style>
-                .container {
+                  }
+    
+                  function downloadInvoice() {
+                    const selectedPages = Array.from(document.querySelectorAll('.page-checkbox:checked')).map(checkbox => checkbox.value);
+                    const revenue = document.getElementById('facebook-revenue').value;
+                    const operationalCosts = document.getElementById('operational-costs').value;
+                    const partnerFees = document.getElementById('partner-fees').value;
+                    const otherCosts = document.getElementById('other-costs').value;
+                    const netRevenue = document.getElementById('net-revenue').value;
+    
+                    const invoiceContent = `
+                      Invoice
+                      ==========
+                      Selected Pages: ${selectedPages.join(', ')}
+                      Total Revenue: $${revenue}
+                      Operational Costs: $${operationalCosts}
+                      Partner Fees: $${partnerFees}
+                      Other Costs: $${otherCosts}
+                      Net Revenue: $${netRevenue}
+                    `;
+    
+                    const blob = new Blob([invoiceContent], { type: 'text/plain' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'invoice.txt';
+                    link.click();
+                  }
+                </script>
+    
+                <style>
+                  .container {
                     animation: fadeIn 0.5s ease-in-out;
                     padding: 20px;
                     background-color: var(--theme-background-color, #fff);
                     border-radius: 8px;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                }
-            
-                h1 {
-                    text-align: center;
-                    margin-bottom: 20px;
-                    color: var(--theme-primary-color, #333);
-                }
-            
-                .data-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    table-layout: fixed;
-                }
-            
-                .data-table th,
-                .data-table td {
-                    padding: 12px;
-                    border: 1px solid var(--theme-border-color, #ddd);
-                    text-align: left;
-                }
-            
-                .data-table th {
-                    background-color: var(--theme-primary-color, rgb(79 111 164));
-                    color: var(--theme-text-color, #fff);
-                    position: sticky;
-                    top: 0;
-                }
-            
-                .data-table tr:hover {
-                    background-color: var(--theme-hover-color, #f0f8ff);
-                    transition: background-color 0.3s ease;
-                }
-            
-                .form-group {
+                  }
+    
+                  .form-group {
                     margin-bottom: 15px;
-                }
-            
-                .form-group label {
+                    width: 100%;
+                  }
+    
+                  .form-group label {
                     display: block;
                     font-weight: bold;
                     margin-bottom: 5px;
-                    color: var(--theme-text-color, #555);
-                }
-            
-                .form-group input,
-                .form-group textarea {
-                    width: 100%;
+                  }
+    
+                  .modern-checkbox-dropdown {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
                     padding: 10px;
                     border: 1px solid var(--theme-border-color, #ddd);
                     border-radius: 4px;
-                    font-size: 14px;
-                }
-            
-                .form-group input[readonly],
-                .form-group textarea[readonly] {
                     background-color: var(--theme-muted-color, #f9f9f9);
-                }
-            
-                .btn-calculate {
+                    width: 100%;
+                  }
+    
+                  .checkbox-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    transition: background-color 0.3s ease;
+                    padding: 5px;
+                    border-radius: 4px;
+                    background-color: var(--theme-background-color, #fff);
+                    flex: 1;
+                  }
+    
+                  .checkbox-item:hover {
+                    background-color: var(--theme-hover-color, #e0f7fa);
+                  }
+    
+                  .checkbox-item input {
+                    margin: 0;
+                  }
+    
+                  .btn-small {
+                    margin-top: 10px;
+                    padding: 5px 10px;
+                    font-size: 12px;
+                    color: #fff;
+                    background-color: var(--theme-primary-color, rgb(79 111 164));
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    display: inline-block;
+                    margin-right: 5px;
+                  }
+    
+                  .btn-small:hover {
+                    background-color: var(--theme-hover-color, #3b5a7f);
+                  }
+    
+                  .btn-calculate, .btn-download {
                     padding: 10px 20px;
                     font-size: 16px;
                     color: var(--theme-text-color, #fff);
@@ -387,21 +469,35 @@
                     display: block;
                     margin: 20px auto;
                     transition: background-color 0.3s ease;
-                }
-            
-                .btn-calculate:hover {
-                    background-color: var(--theme-hover-color, #46a00b);
-                }
-            
-                @keyframes fadeIn {
+                  }
+    
+                  .btn-download {
+                    background-color: #46a00b;
+                  }
+    
+                  .btn-calculate:hover {
+                    background-color: var(--theme-hover-color, #3b5a7f);
+                  }
+    
+                  .btn-download:hover {
+                    background-color: var(--theme-hover-color, #3b8e0a);
+                  }
+    
+                  @keyframes fadeIn {
                     from {
-                        opacity: 0;
+                      opacity: 0;
                     }
                     to {
-                        opacity: 1;
+                      opacity: 1;
                     }
-                }
-            </style>
+                  }
+                </style>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    
             
         
 
