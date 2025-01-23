@@ -3,12 +3,12 @@ import requests
 import os
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
-app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")  # Replace with a secure secret key
+app.secret_key = os.getenv("SECRET_KEY", "UVH67#1zBp2!JxqR8vL3*QxRf@A9$YNm")  # Secure random key
 
 # Facebook App Configuration
-FB_APP_ID = os.getenv("FB_APP_ID", "your_facebook_app_id")
-FB_APP_SECRET = os.getenv("FB_APP_SECRET", "your_facebook_app_secret")
-FB_REDIRECT_URI = os.getenv("FB_REDIRECT_URI", "https://pib-grow.vercel.app/callback")
+FB_APP_ID = os.getenv("FACEBOOK_APP_ID", "407721285698090")
+FB_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "4775235855fcd971cfe6828ab439b4fc")
+FB_REDIRECT_URI = os.getenv("REDIRECT_URI", "https://pib-grow.vercel.app/auth/callback")
 
 
 # Sign-Up Page Route
@@ -26,7 +26,7 @@ def sign_up():
 
 
 # Facebook OAuth Callback
-@app.route('/facebook/callback')
+@app.route('/auth/callback')
 def facebook_callback():
     # Get the authorization code from Facebook's callback
     code = request.args.get('code')
