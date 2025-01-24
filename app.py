@@ -3,7 +3,6 @@ import requests
 import os
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
-app.secret_key = os.getenv("SECRET_KEY", "UVH67#1zBp2!JxqR8vL3*QxRf@A9$YNm")  # Secure random key
 
 # Facebook App Configuration
 FB_APP_ID = os.getenv("FACEBOOK_APP_ID", "407721285698090")
