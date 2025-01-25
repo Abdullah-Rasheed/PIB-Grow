@@ -72,24 +72,23 @@ def dashboard():
         pages_data = pages_response.json().get('data', [])
 
         # Prepare partner data
-        partners = []
+        partner_pages = []
         total_revenue = 0
         for page in pages_data:
             page_revenue = 10000 + hash(page['id']) % 5000  # Mock revenue generation
             total_revenue += page_revenue
+            partner_pages.append({'name': page['name'], 'revenue': f"${page_revenue:,}"})
 
-            # Append partner data
-            partners.append({
-                'name': user_name,  # Replace with user business name if available
-                'pages': [{'name': page['name'], 'revenue': f"${page_revenue:,}"}],
-                'total_revenue': f"${page_revenue:,}",
-                'status': 'green' if page_revenue > 15000 else 'yellow' if page_revenue > 10000 else 'red'
-            })
+        partners = [{
+            'name': user_name,  # Replace with business name if applicable
+            'pages': partner_pages,
+            'total_revenue': f"${total_revenue:,}",
+            'status': 'green' if total_revenue > 50000 else 'yellow' if total_revenue > 30000 else 'red'
+        }]
 
         return render_template(
             'dashboard.html',
-            partners=partners,
-            total_revenue=f"${total_revenue:,}"
+            partners=partners
         )
 
     except requests.exceptions.RequestException as e:
@@ -98,6 +97,7 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+
 
 
 # Serve static assets
