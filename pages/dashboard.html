@@ -364,22 +364,23 @@
     <tbody id="modern-partner-table">
       {% for partner in partners %}
       <tr class="partner-row">
+        <!-- Partner Name -->
         <td>
           <div class="d-flex flex-column">
-            <!-- Partner Name (clickable link) -->
             <a href="#" 
                class="partner-name" 
                data-pages='{{ partner.pages | tojson | safe }}'>{{ partner.name }}</a>
-            
-            <!-- Hidden company pages section -->
+            <!-- Dropdown container for partner's pages -->
             <div class="company-pages mt-2" style="display: none;">
               <ul class="list-group">
-                <!-- Page names and revenue will be populated via JS -->
+                <!-- Pages will be dynamically populated -->
               </ul>
             </div>
           </div>
         </td>
+        <!-- Total Revenue -->
         <td>{{ partner.total_revenue }}</td>
+        <!-- Status Badge -->
         <td>
           <div class="status-tooltip position-relative">
             {% if partner.status == 'green' %}
@@ -407,7 +408,7 @@
 </div>
 
 <script>
-  // Add event listeners for each partner name
+  // Add event listeners for toggling the pages dropdown
   document.querySelectorAll('.partner-name').forEach(function (element) {
     element.addEventListener('click', function (event) {
       event.preventDefault();
@@ -435,7 +436,6 @@
     });
   });
 </script>
-
 
         
       
