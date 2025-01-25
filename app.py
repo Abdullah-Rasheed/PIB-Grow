@@ -63,7 +63,6 @@ def dashboard():
         user_response.raise_for_status()
         user_data = user_response.json()
         user_name = user_data.get('name', 'Unknown User')
-        print("User data fetched:", user_data)  # Debug log
 
         # Fetch pages associated with the user
         pages_url = "https://graph.facebook.com/v16.0/me/accounts"
@@ -71,23 +70,26 @@ def dashboard():
         pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
-        print("Pages data fetched:", pages_data)  # Debug log
 
-        # Mock monthly revenue data for pages
+        # Prepare partner data
+        partners = []
+        total_revenue = 0
         for page in pages_data:
-            page['revenue'] = f"${10000 + hash(page['id']) % 5000}"
+            page_revenue = 10000 + hash(page['id']) % 5000  # Mock revenue generation
+            total_revenue += page_revenue
 
-        # Calculate total revenue
-        total_revenue = sum(
-            int(page['revenue'].strip('$').replace(',', '')) for page in pages_data
-        )
+            # Append partner data
+            partners.append({
+                'name': user_name,  # Replace with user business name if available
+                'pages': [{'name': page['name'], 'revenue': f"${page_revenue:,}"}],
+                'total_revenue': f"${page_revenue:,}",
+                'status': 'green' if page_revenue > 15000 else 'yellow' if page_revenue > 10000 else 'red'
+            })
 
-        # Render the dashboard with user and page data
         return render_template(
             'dashboard.html',
-            user_name=user_name,
-            pages=pages_data,
-            total_revenue=f"${total_revenue:,}",
+            partners=partners,
+            total_revenue=f"${total_revenue:,}"
         )
 
     except requests.exceptions.RequestException as e:
@@ -96,6 +98,7 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
