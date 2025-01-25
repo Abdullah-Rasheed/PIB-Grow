@@ -3,7 +3,7 @@ import requests
 import os
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
-app.secret_key = os.urandom(24)
+app.secret_key = os.urandom(24)  # Ensure secret key is set for session management
 
 # Environment variables
 FACEBOOK_APP_ID = os.getenv('FACEBOOK_APP_ID', '407721285698090')
@@ -23,23 +23,30 @@ def facebook_callback():
     if not code:
         return "Error: Authorization code not found.", 400
 
-    # Exchange code for access token
-    token_url = 'https://graph.facebook.com/v16.0/oauth/access_token'
-    token_params = {
-        'client_id': FACEBOOK_APP_ID,
-        'redirect_uri': REDIRECT_URI,
-        'client_secret': FACEBOOK_APP_SECRET,
-        'code': code,
-    }
-    token_response = requests.get(token_url, params=token_params)
+    try:
+        # Exchange code for access token
+        token_url = 'https://graph.facebook.com/v16.0/oauth/access_token'
+        token_params = {
+            'client_id': FACEBOOK_APP_ID,
+            'redirect_uri': REDIRECT_URI,
+            'client_secret': FACEBOOK_APP_SECRET,
+            'code': code,
+        }
+        token_response = requests.get(token_url, params=token_params)
+        token_response.raise_for_status()
 
-    if token_response.status_code != 200:
-        return "Error: Unable to fetch access token.", 500
+        access_token = token_response.json().get('access_token')
+        if not access_token:
+            return "Error: Failed to retrieve access token.", 500
 
-    access_token = token_response.json().get('access_token')
-    session['access_token'] = access_token
+        session['access_token'] = access_token
+        print("Access token successfully retrieved:", access_token)  # Debug log
 
-    return redirect(url_for('dashboard'))
+        return redirect(url_for('dashboard'))
+
+    except requests.exceptions.RequestException as e:
+        print("Error during token exchange:", e)
+        return "An error occurred during authentication.", 500
 
 # Route: Dashboard
 @app.route('/dashboard')
@@ -56,6 +63,7 @@ def dashboard():
         user_response.raise_for_status()
         user_data = user_response.json()
         user_name = user_data.get('name', 'Unknown User')
+        print("User data fetched:", user_data)  # Debug log
 
         # Fetch pages associated with the user
         pages_url = "https://graph.facebook.com/v16.0/me/accounts"
@@ -63,6 +71,7 @@ def dashboard():
         pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
+        print("Pages data fetched:", pages_data)  # Debug log
 
         # Mock monthly revenue data for pages
         for page in pages_data:
@@ -84,6 +93,9 @@ def dashboard():
     except requests.exceptions.RequestException as e:
         print("Error fetching data from Facebook:", e)
         return "An error occurred while fetching data from Facebook.", 500
+    except Exception as e:
+        print("Unexpected error:", e)
+        return "An unexpected error occurred.", 500
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
