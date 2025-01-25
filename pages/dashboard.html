@@ -351,81 +351,61 @@
                   </button>
                 </div>
         
-                <!-- Partner Table -->
-                <div class="table-responsive">
-                  <table class="table table-hover align-middle">
-                    <thead class="bg-light">
-                      <tr>
-                        <th>Partner Name</th>
-                        <th>Monthly Revenue</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody id="modern-partner-table">
-                      <tr class="partner-row">
-                        <td>
-                          <div class="d-flex flex-column">
-                            <a href="#" class="partner-name" data-pages='[{"name": "ABC Corp Page 1", "revenue": "$20,000"}, {"name": "ABC Corp Page 2", "revenue": "$15,000"}, {"name": "ABC Corp Community", "revenue": "$15,000"}]'>ABC Corp</a>
-                            <div class="company-pages mt-2" style="display: none;">
-                              <ul class="list-group"></ul>
-                            </div>
-                          </div>
-                        </td>
-                        <td>$50,000</td>
-                        <td>
-                          <div class="status-tooltip position-relative">
-                            <span class="badge bg-success rounded-pill">Green</span>
-                            <div class="tooltip-box">
-                              <p class="mb-0 text-white">Revenue up 15% from last month.</p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr class="partner-row">
-                        <td>
-                          <div class="d-flex flex-column">
-                            <a href="#" class="partner-name" data-pages='[{"name": "XYZ Inc Official", "revenue": "$10,000"}, {"name": "XYZ Inc Marketing", "revenue": "$12,000"}, {"name": "XYZ Inc Careers", "revenue": "$8,000"}]'>XYZ Inc</a>
-                            <div class="company-pages mt-2" style="display: none;">
-                              <ul class="list-group"></ul>
-                            </div>
-                          </div>
-                        </td>
-                        <td>$30,000</td>
-                        <td>
-                          <div class="status-tooltip position-relative">
-                            <span class="badge bg-warning rounded-pill">Yellow</span>
-                            <div class="tooltip-box">
-                              <p class="mb-0 text-white">Revenue stable compared to last month.</p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr class="partner-row">
-                        <td>
-                          <div class="d-flex flex-column">
-                            <a href="#" class="partner-name" data-pages='[{"name": "LMN Co Support", "revenue": "$4,000"}, {"name": "LMN Co Sales", "revenue": "$3,000"}, {"name": "LMN Co Events", "revenue": "$3,000"}]'>LMN Co</a>
-                            <div class="company-pages mt-2" style="display: none;">
-                              <ul class="list-group"></ul>
-                            </div>
-                          </div>
-                        </td>
-                        <td>$10,000</td>
-                        <td>
-                          <div class="status-tooltip position-relative">
-                            <span class="badge bg-danger rounded-pill">Red</span>
-                            <div class="tooltip-box">
-                              <p class="mb-0 text-white">Revenue down 20% from last month.</p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="bg-light">
+      <tr>
+        <th>Partner Name</th>
+        <th>Monthly Revenue</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="modern-partner-table">
+      <!-- Dynamic Partner Row -->
+      <tr class="partner-row">
+        <td>
+          <div class="d-flex flex-column">
+            <a
+              href="#"
+              class="partner-name"
+              data-pages='{{ pages | tojson }}'>{{ partner_name }}</a>
+            <div class="company-pages mt-2" style="display: none;">
+              <ul class="list-group">
+                {% for page in pages %}
+                <li class="list-group-item">
+                  <strong>{{ page.name }}</strong> - Revenue: {{ page.revenue }}
+                </li>
+                {% endfor %}
+              </ul>
             </div>
           </div>
-        </div>
+        </td>
+        <td>{{ total_revenue }}</td>
+        <td>
+          <div class="status-tooltip position-relative">
+            {% if total_revenue.strip('$').replace(',', '')|int > 30000 %}
+            <span class="badge bg-success rounded-pill">Green</span>
+            <div class="tooltip-box">
+              <p class="mb-0 text-white">Revenue above $30,000.</p>
+            </div>
+            {% elif total_revenue.strip('$').replace(',', '')|int > 15000 %}
+            <span class="badge bg-warning rounded-pill">Yellow</span>
+            <div class="tooltip-box">
+              <p class="mb-0 text-white">Revenue stable.</p>
+            </div>
+            {% else %}
+            <span class="badge bg-danger rounded-pill">Red</span>
+            <div class="tooltip-box">
+              <p class="mb-0 text-white">Revenue below $15,000.</p>
+            </div>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
         
         <script>
           document.querySelectorAll('.partner-name').forEach(function (partner) {
