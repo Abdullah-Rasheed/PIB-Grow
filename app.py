@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
-app.secret_key = os.urandom(24)  # Ensure secret key is set for session management
+app.secret_key = os.urandom(24)  # Secure secret key for session management
 
 # Environment variables
 FACEBOOK_APP_ID = os.getenv('FACEBOOK_APP_ID', '407721285698090')
@@ -18,11 +18,23 @@ REDIRECT_URI = os.getenv('REDIRECT_URI', 'https://pib-grow.vercel.app/auth/callb
 @app.route('/')
 @app.route('/sign-up')
 def sign_up():
-    return render_template('sign-up.html', facebook_app_id=FACEBOOK_APP_ID, redirect_uri=REDIRECT_URI)
+    """
+    Render the sign-up page with Facebook OAuth URL variables.
+    """
+    fb_login_url = (
+        f"https://www.facebook.com/v16.0/dialog/oauth"
+        f"?client_id={FACEBOOK_APP_ID}"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&scope=email,public_profile"
+    )
+    return render_template('sign-up.html', fb_login_url=fb_login_url)
 
 # Route: Facebook OAuth Callback
 @app.route('/auth/callback')
 def facebook_callback():
+    """
+    Handle Facebook OAuth callback, exchange the authorization code for an access token.
+    """
     code = request.args.get('code')
     if not code:
         return "Error: Authorization code not found.", 400
@@ -43,8 +55,9 @@ def facebook_callback():
         if not access_token:
             return "Error: Failed to retrieve access token.", 500
 
+        # Save access token in session
         session['access_token'] = access_token
-        print("Access token successfully retrieved:", access_token)  # Debug log
+        print("Access token successfully retrieved:", access_token)
 
         return redirect(url_for('dashboard'))
 
@@ -55,6 +68,9 @@ def facebook_callback():
 # Route: Dashboard
 @app.route('/dashboard')
 def dashboard():
+    """
+    Fetch user data and their Facebook pages, then render the dashboard.
+    """
     access_token = session.get('access_token')
     if not access_token:
         return redirect(url_for('sign_up'))
@@ -66,6 +82,7 @@ def dashboard():
         user_response = requests.get(user_url, params=user_params)
         user_response.raise_for_status()
         user_data = user_response.json()
+
         user_name = user_data.get('name', 'Unknown User')
         user_email = user_data.get('email', 'Not Provided')
 
@@ -114,13 +131,12 @@ def dashboard():
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
 
-
-
-
-
 # Serve static assets
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
+    """
+    Serve static files from the assets directory.
+    """
     return send_from_directory(app.static_folder, filename)
 
 if __name__ == '__main__':
