@@ -25,9 +25,10 @@ def sign_up():
         f"https://www.facebook.com/v16.0/dialog/oauth"
         f"?client_id={FACEBOOK_APP_ID}"
         f"&redirect_uri={REDIRECT_URI}"
-        f"&scope=email,public_profile"
+        f"&scope=email,public_profile,pages_read_engagement,pages_read_user_content"
     )
     return render_template('sign-up.html', fb_login_url=fb_login_url)
+
 
 # Route: Facebook OAuth Callback
 @app.route('/auth/callback')
@@ -64,6 +65,7 @@ def facebook_callback():
     except requests.exceptions.RequestException as e:
         print("Error during token exchange:", e)
         return "An error occurred during authentication.", 500
+
 
 # Route: Dashboard
 @app.route('/dashboard')
@@ -131,6 +133,7 @@ def dashboard():
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
 
+
 # Serve static assets
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
@@ -138,6 +141,7 @@ def serve_assets(filename):
     Serve static files from the assets directory.
     """
     return send_from_directory(app.static_folder, filename)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
