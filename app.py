@@ -1,10 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 import requests
 import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file (for local development)
-load_dotenv()
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
 app.secret_key = os.urandom(24)  # Secure secret key for session management
