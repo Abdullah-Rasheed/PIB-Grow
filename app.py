@@ -56,7 +56,7 @@ def dashboard():
         return redirect(url_for('sign_up'))
 
     try:
-        # Fetch user and partner information
+        # Fetch user information
         user_url = "https://graph.facebook.com/v16.0/me"
         user_params = {"fields": "name,email", "access_token": access_token}
         user_response = requests.get(user_url, params=user_params)
@@ -65,24 +65,23 @@ def dashboard():
         user_name = user_data.get('name', 'Unknown User')
         user_email = user_data.get('email', 'Not Provided')
 
+        # Fetch pages associated with the user
         pages_url = "https://graph.facebook.com/v16.0/me/accounts"
         pages_params = {"fields": "name,id", "access_token": access_token}
         pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
 
+        # Prepare partner data
         partner_pages = []
         total_revenue = 0
-        revenue_growth_percentage = 10  # Example growth percentage for this month
-        growth_chart_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May']  # Example months
-        growth_chart_data = []  # Example revenue data per month
-        monthly_growth = 1.1  # Example monthly growth factor
-
+        revenue_data = []
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May']  # Example labels for chart
         for page in pages_data:
             page_revenue = 10000 + hash(page['id']) % 5000  # Mock revenue generation
             total_revenue += page_revenue
             partner_pages.append({'name': page['name'], 'revenue': f"${page_revenue:,}"})
-            growth_chart_data.append(page_revenue * monthly_growth)  # Mock growth data
+            revenue_data.append(page_revenue)  # Example data for chart
 
         partners = [{
             'name': user_name,
@@ -92,22 +91,16 @@ def dashboard():
             'status': 'green' if total_revenue > 50000 else 'yellow' if total_revenue > 30000 else 'red'
         }]
 
-        # Annual growth percentage (mock data)
-        annual_growth_percentage = 4
-        current_year = 2024
+        performance = {
+            'labels': labels,
+            'data': revenue_data
+        }
 
         return render_template(
             'dashboard.html',
             partners=partners,
-            partner=partners[0],
-            pib_total_revenue=f"${total_revenue:,}",
-            revenue_growth_percentage=revenue_growth_percentage,
-            growth_chart={
-                'labels': growth_chart_labels,
-                'data': growth_chart_data,
-            },
-            annual_growth_percentage=annual_growth_percentage,
-            current_year=current_year,
+            performance=performance,
+            partner=partners[0]
         )
 
     except requests.exceptions.RequestException as e:
@@ -116,6 +109,7 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+
 
 
 
