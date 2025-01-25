@@ -351,6 +351,7 @@
                   </button>
                 </div>
         
+<!-- Partner Table -->
 <div class="table-responsive">
   <table class="table table-hover align-middle">
     <thead class="bg-light">
@@ -361,84 +362,83 @@
       </tr>
     </thead>
     <tbody id="modern-partner-table">
-      <!-- Dynamic Partner Row -->
+      {% for partner in partners %}
       <tr class="partner-row">
         <td>
           <div class="d-flex flex-column">
-            <a
-              href="#"
-              class="partner-name"
-              data-pages='{{ pages | tojson }}'>{{ partner_name }}</a>
+            <!-- Partner Name (clickable link) -->
+            <a href="#" 
+               class="partner-name" 
+               data-pages='{{ partner.pages | tojson | safe }}'>{{ partner.name }}</a>
+            
+            <!-- Hidden company pages section -->
             <div class="company-pages mt-2" style="display: none;">
               <ul class="list-group">
-                {% for page in pages %}
-                <li class="list-group-item">
-                  <strong>{{ page.name }}</strong> - Revenue: {{ page.revenue }}
-                </li>
-                {% endfor %}
+                <!-- Page names and revenue will be populated via JS -->
               </ul>
             </div>
           </div>
         </td>
-        <td>{{ total_revenue }}</td>
+        <td>{{ partner.total_revenue }}</td>
         <td>
           <div class="status-tooltip position-relative">
-            {% if total_revenue.strip('$').replace(',', '')|int > 30000 %}
+            {% if partner.status == 'green' %}
             <span class="badge bg-success rounded-pill">Green</span>
             <div class="tooltip-box">
-              <p class="mb-0 text-white">Revenue above $30,000.</p>
+              <p class="mb-0 text-white">Revenue up 15% from last month.</p>
             </div>
-            {% elif total_revenue.strip('$').replace(',', '')|int > 15000 %}
+            {% elif partner.status == 'yellow' %}
             <span class="badge bg-warning rounded-pill">Yellow</span>
             <div class="tooltip-box">
-              <p class="mb-0 text-white">Revenue stable.</p>
+              <p class="mb-0 text-white">Revenue stable compared to last month.</p>
             </div>
             {% else %}
             <span class="badge bg-danger rounded-pill">Red</span>
             <div class="tooltip-box">
-              <p class="mb-0 text-white">Revenue below $15,000.</p>
+              <p class="mb-0 text-white">Revenue down 20% from last month.</p>
             </div>
             {% endif %}
           </div>
         </td>
       </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>
 
+<script>
+  // Add event listeners for each partner name
+  document.querySelectorAll('.partner-name').forEach(function (element) {
+    element.addEventListener('click', function (event) {
+      event.preventDefault();
+
+      // Get the associated pages data from the 'data-pages' attribute
+      const pages = JSON.parse(this.getAttribute('data-pages'));
+
+      // Find the corresponding "company-pages" section
+      const companyPagesSection = this.nextElementSibling;
+      const pageList = companyPagesSection.querySelector('ul');
+
+      // Clear previous entries
+      pageList.innerHTML = '';
+
+      // Populate the list with page names and revenue
+      pages.forEach(page => {
+        const listItem = document.createElement('li');
+        listItem.className = 'list-group-item';
+        listItem.textContent = `${page.name}: ${page.revenue}`;
+        pageList.appendChild(listItem);
+      });
+
+      // Toggle visibility of the company pages section
+      companyPagesSection.style.display = companyPagesSection.style.display === 'none' ? 'block' : 'none';
+    });
+  });
+</script>
+
+
         
-        <script>
-          document.querySelectorAll('.partner-name').forEach(function (partner) {
-            partner.addEventListener('click', function (event) {
-              event.preventDefault();
-              const parentDiv = partner.closest('td').querySelector('.company-pages');
-              const pages = JSON.parse(partner.dataset.pages);
-              const listGroup = parentDiv.querySelector('.list-group');
-              listGroup.innerHTML = '';
-        
-              pages.forEach(page => {
-                const li = document.createElement('li');
-                li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                li.innerHTML = `<span>${page.name}</span><span class="badge bg-primary rounded-pill">${page.revenue}</span>`;
-                listGroup.appendChild(li);
-              });
-        
-              // Toggle visibility of the company-pages div
-              parentDiv.style.display = parentDiv.style.display === 'none' ? 'block' : 'none';
-            });
-          });
-        
-          document.getElementById('filter-red-modern').addEventListener('click', function () {
-            document.querySelectorAll('.partner-row').forEach(function (row) {
-              const statusBadge = row.querySelector('.badge');
-              if (statusBadge && statusBadge.classList.contains('bg-danger')) {
-                row.style.display = '';
-              } else {
-                row.style.display = 'none';
-              }
-            });
-          });
-        </script>
+      
         
           
           <!-- CSS -->
