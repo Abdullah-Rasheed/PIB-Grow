@@ -76,18 +76,39 @@ def dashboard():
         partner_pages = []
         total_revenue = 0
         revenue_data = []
-        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May']  # Example labels for chart
+        labels = []  # For monthly labels
         for page in pages_data:
-            page_revenue = 10000 + hash(page['id']) % 5000  # Mock revenue generation
-            total_revenue += page_revenue
-            partner_pages.append({'name': page['name'], 'revenue': f"${page_revenue:,}"})
-            revenue_data.append(page_revenue)  # Example data for chart
+            page_id = page['id']
+            page_name = page['name']
 
+            # Fetch monetization revenue for the page
+            insights_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
+            insights_params = {
+                "metric": "estimated_revenue",
+                "period": "month",
+                "access_token": access_token
+            }
+            insights_response = requests.get(insights_url, params=insights_params)
+            
+            if insights_response.status_code == 200:
+                insights_data = insights_response.json().get('data', [])
+                monthly_revenue = [
+                    float(entry['value']) for entry in insights_data if 'value' in entry
+                ]
+                total_page_revenue = sum(monthly_revenue)
+                total_revenue += total_page_revenue
+                labels = [entry['title'] for entry in insights_data]  # Update labels dynamically
+                partner_pages.append({'name': page_name, 'revenue': f"${total_page_revenue:,.2f}"})
+                revenue_data.extend(monthly_revenue)
+            else:
+                partner_pages.append({'name': page_name, 'revenue': "Revenue not found"})
+
+        # Aggregate partner data
         partners = [{
             'name': user_name,
             'email': user_email,
             'pages': partner_pages,
-            'total_revenue': f"${total_revenue:,}",
+            'total_revenue': f"${total_revenue:,.2f}",
             'status': 'green' if total_revenue > 50000 else 'yellow' if total_revenue > 30000 else 'red'
         }]
 
