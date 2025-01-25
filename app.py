@@ -58,11 +58,12 @@ def dashboard():
     try:
         # Fetch user information
         user_url = "https://graph.facebook.com/v16.0/me"
-        user_params = {"fields": "name", "access_token": access_token}
+        user_params = {"fields": "name,email", "access_token": access_token}
         user_response = requests.get(user_url, params=user_params)
         user_response.raise_for_status()
         user_data = user_response.json()
         user_name = user_data.get('name', 'Unknown User')
+        user_email = user_data.get('email', 'Not Provided')
 
         # Fetch pages associated with the user
         pages_url = "https://graph.facebook.com/v16.0/me/accounts"
@@ -74,21 +75,32 @@ def dashboard():
         # Prepare partner data
         partner_pages = []
         total_revenue = 0
+        revenue_data = []
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May']  # Example labels for chart
         for page in pages_data:
             page_revenue = 10000 + hash(page['id']) % 5000  # Mock revenue generation
             total_revenue += page_revenue
             partner_pages.append({'name': page['name'], 'revenue': f"${page_revenue:,}"})
+            revenue_data.append(page_revenue)  # Example data for chart
 
         partners = [{
-            'name': user_name,  # Replace with business name if applicable
+            'name': user_name,
+            'email': user_email,
             'pages': partner_pages,
             'total_revenue': f"${total_revenue:,}",
             'status': 'green' if total_revenue > 50000 else 'yellow' if total_revenue > 30000 else 'red'
         }]
 
+        performance = {
+            'labels': labels,
+            'data': revenue_data
+        }
+
         return render_template(
             'dashboard.html',
-            partners=partners
+            partners=partners,
+            performance=performance,
+            partner=partners[0]
         )
 
     except requests.exceptions.RequestException as e:
