@@ -306,7 +306,7 @@
           </div>
         </td>
         <!-- Total Revenue -->
-        <td>{{ partner.total_revenue }}</td>
+        <td>${{ partner.total_revenue }}</td>
         <!-- Status Badge -->
         <td>
           <div class="status-tooltip position-relative">
@@ -354,7 +354,7 @@
       pages.forEach(page => {
         const listItem = document.createElement('li');
         listItem.className = 'list-group-item';
-        listItem.textContent = `${page.name}: ${page.revenue}`;
+        listItem.textContent = `${page.name}: $${page.revenue}`;
         pageList.appendChild(listItem);
       });
 
@@ -364,92 +364,7 @@
   });
 </script>
 
-        
-      
-        
-          
-          <!-- CSS -->
-          <style>
-            .partner-breakdown {
-              font-family: 'Inter', sans-serif;
-            }
-          
-            /* Header Styling */
-            .header h2 {
-              font-weight: 600;
-              text-transform: capitalize;
-            }
-          
-            /* Table Styling */
-            .table-hover tbody tr:hover {
-              background-color: #f9f9f9;
-              cursor: pointer;
-              transition: background-color 0.3s ease;
-            }
-          
-            .badge {
-              font-size: 0.85rem;
-              padding: 0.4rem 0.6rem;
-            }
-          
-            /* Tooltip Styling */
-            .status-tooltip .tooltip-box {
-              display: none;
-              position: absolute;
-              bottom: 130%;
-              left: 50%;
-              transform: translateX(-50%);
-              background-color: rgba(0, 0, 0, 0.8);
-              padding: 0.5rem 1rem;
-              border-radius: 8px;
-              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-              white-space: nowrap;
-              z-index: 1000;
-              font-size: 0.8rem;
-              transition: opacity 0.2s ease;
-            }
-          
-            .status-tooltip:hover .tooltip-box {
-              display: block;
-              opacity: 1;
-            }
-          
-            /* Buttons */
-            button {
-              transition: all 0.3s ease;
-            }
-          
-            button:hover {
-              transform: scale(1.05);
-            }
-          </style>
-          
-          <!-- JavaScript -->
-          <script>
-            // Sort by Revenue
-            document.getElementById('sort-revenue-modern').addEventListener('click', () => {
-              const table = document.getElementById('modern-partner-table');
-              const rows = Array.from(table.querySelectorAll('.partner-row'));
-              rows.sort((a, b) => {
-                const revenueA = parseInt(a.cells[1].textContent.replace(/[^0-9]/g, ''));
-                const revenueB = parseInt(b.cells[1].textContent.replace(/[^0-9]/g, ''));
-                return revenueB - revenueA;
-              });
-              rows.forEach(row => table.appendChild(row));
-            });
-          
-            // Filter Red Status
-            document.getElementById('filter-red-modern').addEventListener('click', () => {
-              const rows = document.querySelectorAll('.partner-row');
-              rows.forEach(row => {
-                const status = row.querySelector('.badge').textContent;
-                row.style.display = status === 'Red' ? '' : 'none';
-              });
-            });
-          </script>          
-        </div>
-      </div>
-         <!-- Partner Tier Pages Section -->
+<!-- Partner Tier Pages Section -->
 <div class="col-lg-12">
   <div class="card shadow-sm border-0">
     <div class="card-header bg-gradient-secondary text-white pb-2 d-flex justify-content-between align-items-center">
@@ -473,7 +388,7 @@
             <div class="card-body">
               <h6>Company Name: <span class="text-muted">{{ partner.name }}</span></h6>
               <h6>Email: <span class="text-muted">{{ partner.email }}</span></h6>
-              <h6>Total Revenue: <span class="text-muted">{{ partner.total_revenue }}</span></h6>
+              <h6>Total Revenue: <span class="text-muted">${{ partner.total_revenue }}</span></h6>
               <h6>Revenue Formula: <span class="text-muted">Performance-based</span></h6>
             </div>
           </div>
@@ -495,8 +410,6 @@
   </div>
 </div>
 
-<!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   // Performance Metrics Graph
   const ctx3 = document.getElementById('performanceChart').getContext('2d');
@@ -521,6 +434,7 @@
     },
   });
 </script>
+
 
               
               <!-- CSS -->
