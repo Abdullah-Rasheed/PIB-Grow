@@ -62,8 +62,7 @@ def partners():
 def _fetch_partner_data_and_render(template_name):
     access_token = session.get('access_token')
     if not access_token:
-        # Redirects to partners.html instead of sign-up.html
-        return redirect(url_for('partners'))
+        return redirect(url_for('sign_up'))  # Redirect to sign-up if not authenticated
 
     try:
         # Fetch user information
