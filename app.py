@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 import requests
 import os
 
@@ -72,16 +72,18 @@ def dashboard():
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
 
-        # Prepare partner data
         partner_pages = []
         total_revenue = 0
         revenue_data = []
         labels = []  # For monthly labels
+        page_metrics = []
+        post_metrics = []
+
         for page in pages_data:
             page_id = page['id']
             page_name = page['name']
 
-            # Fetch monetization revenue for the page
+            # Fetch monetization revenue
             insights_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
             insights_params = {
                 "metric": "estimated_revenue",
@@ -89,7 +91,6 @@ def dashboard():
                 "access_token": access_token
             }
             insights_response = requests.get(insights_url, params=insights_params)
-            
             if insights_response.status_code == 200:
                 insights_data = insights_response.json().get('data', [])
                 monthly_revenue = [
@@ -102,6 +103,39 @@ def dashboard():
                 revenue_data.extend(monthly_revenue)
             else:
                 partner_pages.append({'name': page_name, 'revenue': "Revenue not found"})
+
+            # Fetch page-level metrics (e.g., reach, engagement)
+            page_performance_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
+            page_performance_params = {
+                "metric": "page_impressions,page_engaged_users,page_fans",
+                "period": "day",
+                "access_token": access_token,
+            }
+            page_performance_response = requests.get(page_performance_url, params=page_performance_params)
+            if page_performance_response.status_code == 200:
+                page_metrics.append({
+                    "page_name": page_name,
+                    "metrics": page_performance_response.json().get('data', [])
+                })
+
+            # Fetch post-level metrics
+            posts_url = f"https://graph.facebook.com/v16.0/{page_id}/posts"
+            posts_params = {"fields": "id,message,created_time", "access_token": access_token}
+            posts_response = requests.get(posts_url, params=posts_params)
+            posts_data = posts_response.json().get('data', [])
+            for post in posts_data:
+                post_id = post['id']
+                post_metrics_url = f"https://graph.facebook.com/v16.0/{post_id}/insights"
+                post_metrics_params = {
+                    "metric": "post_impressions,post_engaged_users,post_reactions_like_total",
+                    "access_token": access_token,
+                }
+                post_metrics_response = requests.get(post_metrics_url, params=post_metrics_params)
+                if post_metrics_response.status_code == 200:
+                    post_metrics.append({
+                        "post_id": post_id,
+                        "metrics": post_metrics_response.json().get('data', [])
+                    })
 
         # Aggregate partner data
         partners = [{
@@ -121,7 +155,8 @@ def dashboard():
             'dashboard.html',
             partners=partners,
             performance=performance,
-            partner=partners[0]
+            page_metrics=page_metrics,
+            post_metrics=post_metrics
         )
 
     except requests.exceptions.RequestException as e:
@@ -130,10 +165,6 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
-
-
-
-
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
