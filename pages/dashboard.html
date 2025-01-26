@@ -483,6 +483,216 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
+<div class="card shadow-lg mx-4 card-profile-bottom">
+  <div class="card-body p-3">
+    <div class="row gx-4">
+      <div class="col-auto"></div>
+      <div class="col-auto my-auto">
+        <div class="h-100">
+          <h2 class="mb-1">
+            Facebook Pages Overview
+          </h2>
+          
+<!-- Include Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Page-Specific Breakdown Section -->
+<div class="row">
+  <!-- Facebook Pages Overview -->
+  <div class="col-12 mb-4">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">ABC Corporation</h5>
+      </div>
+      
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="bg-light">
+              <tr>
+                <th>Page Name</th>
+                <th>Revenue</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dynamic Table Rows will be inserted here -->
+              {% for page in partner_pages %}
+                <tr class="page-row" data-page="{{ page.name }}">
+                  <td>
+                    <i class="bi bi-file-text me-2 text-primary"></i> {{ page.name }}
+                  </td>
+                  <td>{{ page.revenue }}</td>
+                  <td class="text-success">Processed</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page-Specific Metrics -->
+  <div class="col-12 mb-4">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Page-Specific Metrics</h5>
+        <button class="btn btn-primary btn-sm" id="back-to-overview">
+          <i class="bi bi-arrow-left"></i> Back to Overview
+        </button>
+      </div>
+    </div>
+    <div class="date-range-filter mb-3">
+      <label for="date-range" class="form-label">Select Date Range:</label>
+      <input type="date" id="start-date" class="form-control d-inline-block w-auto">
+      to
+      <input type="date" id="end-date" class="form-control d-inline-block w-auto">
+      <button class="btn btn-primary btn-sm ms-2" id="filter-date-range">Apply</button>
+    </div>
+  </div>
+  
+  <!-- Selected Page Metrics -->
+  <div id="selected-page-metrics" class="mt-4">
+    <h5 id="selected-page-name" class="text-secondary">Select a Page</h5>
+    <div id="additional-metrics"></div>
+  </div>
+  
+  <script>
+    // Event listener for clicking on page rows
+    document.querySelectorAll('.page-row').forEach(row => {
+      row.addEventListener('click', function () {
+        const pageName = this.dataset.page;
+        const metricsDiv = document.getElementById('additional-metrics');
+        
+        document.getElementById('selected-page-name').textContent = this.textContent.trim();
+        
+        // Fetch the metrics dynamically from the server
+        fetch(/api/fetch_page_metrics/${pageName})
+          .then(response => response.json())
+          .then(data => {
+            const pageMetrics = data.page_metrics;
+            const postMetrics = data.post_metrics;
+            const revenueData = data.revenue_data;
+            
+            metricsDiv.innerHTML = 
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Reach</td><td>${pageMetrics.reach}</td></tr>
+                  <tr><td>Engagement</td><td>${pageMetrics.engagement}</td></tr>
+                  <tr><td>Likes/Followers</td><td>${pageMetrics.likes}</td></tr>
+                  <tr><td>Views</td><td>${pageMetrics.views}</td></tr>
+                </tbody>
+              </table>
+            ;
+            
+            // Update the Post Performance Graph
+            const ctxPost = document.getElementById('postPerformanceChart').getContext('2d');
+            const gradientPost = ctxPost.createLinearGradient(0, 0, 0, 400);
+            gradientPost.addColorStop(0, 'rgba(255, 99, 132, 0.5)');
+            gradientPost.addColorStop(1, 'rgba(255, 99, 132, 0)');
+            
+            new Chart(ctxPost, {
+              type: 'bar',
+              data: {
+                labels: postMetrics.labels,
+                datasets: [{
+                  label: 'Post Interactions',
+                  data: postMetrics.values,
+                  backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                  borderWidth: 1,
+                }],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  x: { grid: { display: false } },
+                  y: { grid: { color: 'rgba(200, 200, 200, 0.2)' } },
+                },
+                plugins: {
+                  legend: { display: true },
+                },
+              },
+            });
+
+            // Revenue Trends
+            const ctxRevenue = document.getElementById('pageRevenueChart').getContext('2d');
+            const gradientRevenue = ctxRevenue.createLinearGradient(0, 0, 0, 400);
+            gradientRevenue.addColorStop(0, 'rgba(0, 123, 255, 0.5)');
+            gradientRevenue.addColorStop(1, 'rgba(0, 123, 255, 0)');
+            
+            new Chart(ctxRevenue, {
+              type: 'line',
+              data: {
+                labels: revenueData.labels,
+                datasets: [{
+                  label: 'Revenue ($)',
+                  data: revenueData.values,
+                  borderColor: '#007bff',
+                  backgroundColor: gradientRevenue,
+                  fill: true,
+                  tension: 0.4,
+                  borderWidth: 2,
+                }],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  x: { grid: { display: false } },
+                  y: { grid: { color: 'rgba(200, 200, 200, 0.2)' } },
+                },
+                plugins: {
+                  legend: { display: true },
+                },
+              },
+            });
+          })
+          .catch(error => {
+            console.error('Error fetching page metrics:', error);
+          });
+      });
+    });
+
+    // Back to Overview Button
+    document.getElementById('back-to-overview').addEventListener('click', function () {
+      document.getElementById('selected-page-name').textContent = '';
+      document.getElementById('additional-metrics').innerHTML = '';
+      const ctxPost = document.getElementById('postPerformanceChart').getContext('2d');
+      ctxPost.clearRect(0, 0, ctxPost.canvas.width, ctxPost.canvas.height);
+    });
+  </script>
+  
+  <div class="card-body">
+    <h6>Page Name: <span id="selected-page-name" class="text-muted">Health and Happiness</span></h6>
+
+    <!-- Empty Div for Additional Metrics -->
+    <div id="additional-metrics" class="mt-4"></div>
+
+    <div class="mt-4">
+      <h6>Revenue Trends</h6>
+      <canvas id="pageRevenueChart" height="300"></canvas>
+    </div>
+
+    <div class="mt-4">
+      <h6>Post Performance</h6>
+      <canvas id="postPerformanceChart" height="300"></canvas>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// Fetch data from the API and update dynamically
+// This functionality is added above in the script for specific page row click and fetching data
+</script>        
 
   
                     
