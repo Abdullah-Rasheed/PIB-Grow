@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory
 import requests
 import os
 
@@ -51,6 +51,15 @@ def facebook_callback():
 # Route: Dashboard
 @app.route('/dashboard')
 def dashboard():
+    return _fetch_partner_data_and_render('dashboard.html')
+
+# Route: Partners
+@app.route('/partners')
+def partners():
+    return _fetch_partner_data_and_render('partners.html')
+
+# Helper function to fetch partner data and render a given template
+def _fetch_partner_data_and_render(template_name):
     access_token = session.get('access_token')
     if not access_token:
         return redirect(url_for('sign_up'))
@@ -118,7 +127,7 @@ def dashboard():
         }
 
         return render_template(
-            'dashboard.html',
+            template_name,
             partners=partners,
             performance=performance,
             partner=partners[0]
@@ -130,10 +139,6 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
-
-
-
-
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
