@@ -497,7 +497,172 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-                             
+         <div class="card shadow-lg mx-4 card-profile-bottom">
+  <div class="card-body p-3">
+    <div class="row gx-4">
+      <div class="col-auto"></div>
+      <div class="col-auto my-auto">
+        <div class="h-100">
+          <h2 class="mb-1">Facebook Pages Overview</h2>
+
+          <!-- Facebook Pages Overview Table -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="bg-light">
+                <tr>
+                  <th>Page Name</th>
+                  <th>Revenue</th>
+                  <th>Likes</th>
+                  <th>Followers</th>
+                  <th>Views</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="pages-overview-table">
+                <!-- Dynamic Rows Injected Here -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Page-Specific Metrics Section -->
+          <div id="selected-page-metrics" class="mt-4">
+            <h5 id="selected-page-name" class="text-secondary">Select a Page</h5>
+            <div id="additional-metrics"></div>
+          </div>
+
+          <!-- Revenue Trends -->
+          <div class="mt-4">
+            <h6>Revenue Trends</h6>
+            <canvas id="pageRevenueChart" height="300"></canvas>
+          </div>
+
+          <!-- Post Performance -->
+          <div class="mt-4">
+            <h6>Post Performance</h6>
+            <canvas id="postPerformanceChart" height="300"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Include Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Replace this URL with your API endpoint
+  const apiUrl = "https://your-api-endpoint.com/facebook/pages";
+
+  async function fetchPagesData() {
+    try {
+      const response = await fetch(apiUrl);
+      const pagesData = await response.json();
+
+      // Populate the table with data
+      const tableBody = document.getElementById("pages-overview-table");
+      tableBody.innerHTML = ""; // Clear any existing rows
+
+      pagesData.forEach((page) => {
+        const row = document.createElement("tr");
+        row.classList.add("page-row");
+        row.dataset.page = page.name;
+
+        row.innerHTML = `
+          <td>${page.name}</td>
+          <td>${page.revenue}</td>
+          <td>${page.likes}</td>
+          <td>${page.followers}</td>
+          <td>${page.views}</td>
+          <td class="${
+            page.status === "Processed" ? "text-success" : "text-danger"
+          }">${page.status}</td>
+        `;
+
+        // Add click event to show additional metrics
+        row.addEventListener("click", () => {
+          const metricsDiv = document.getElementById("additional-metrics");
+          document.getElementById("selected-page-name").textContent = page.name;
+
+          metricsDiv.innerHTML = `
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Reach</td><td>${page.metrics.reach}</td></tr>
+                <tr><td>Engagement</td><td>${page.metrics.engagement}</td></tr>
+                <tr><td>Likes</td><td>${page.metrics.likes}</td></tr>
+                <tr><td>Views</td><td>${page.metrics.views}</td></tr>
+              </tbody>
+            </table>
+          `;
+        });
+
+        tableBody.appendChild(row);
+      });
+
+      // Populate charts
+      populateCharts(pagesData);
+    } catch (error) {
+      console.error("Error fetching pages data:", error);
+    }
+  }
+
+  function populateCharts(pagesData) {
+    // Revenue Chart
+    const ctxRevenue = document
+      .getElementById("pageRevenueChart")
+      .getContext("2d");
+    new Chart(ctxRevenue, {
+      type: "line",
+      data: {
+        labels: pagesData.map((page) => page.name),
+        datasets: [
+          {
+            label: "Revenue ($)",
+            data: pagesData.map((page) =>
+              parseFloat(page.revenue.replace("$", "").replace(",", ""))
+            ),
+            borderColor: "#007bff",
+            backgroundColor: "rgba(0, 123, 255, 0.1)",
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+      },
+    });
+
+    // Post Performance Chart
+    const ctxPost = document
+      .getElementById("postPerformanceChart")
+      .getContext("2d");
+    new Chart(ctxPost, {
+      type: "bar",
+      data: {
+        labels: ["Post 1", "Post 2", "Post 3", "Post 4"],
+        datasets: [
+          {
+            label: "Post Interactions",
+            data: [100, 200, 150, 300], // Replace with dynamic post interaction data if available
+            backgroundColor: "rgba(255, 99, 132, 0.7)",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+      },
+    });
+  }
+
+  // Fetch and populate data on page load
+  fetchPagesData();
+</script>
+                    
       <footer class="footer pt-3  ">
         <div class="container-fluid">
           <div class="row align-items-center justify-content-lg-between">
