@@ -335,31 +335,34 @@
 </div>
 
 <script>
-  // Add event listeners for toggling the pages dropdown
-  document.querySelectorAll('.partner-name').forEach(function (element) {
-    element.addEventListener('click', function (event) {
-      event.preventDefault();
+  document.addEventListener('DOMContentLoaded', function () {
+    // Add event listeners for toggling the pages dropdown
+    document.querySelectorAll('.partner-name').forEach(function (element) {
+      element.addEventListener('click', function (event) {
+        event.preventDefault();
 
-      // Get the associated pages data from the 'data-pages' attribute
-      const pages = JSON.parse(this.getAttribute('data-pages'));
+        // Get the associated pages data from the 'data-pages' attribute
+        const pages = JSON.parse(this.getAttribute('data-pages'));
 
-      // Find the corresponding "company-pages" section
-      const companyPagesSection = this.nextElementSibling;
-      const pageList = companyPagesSection.querySelector('ul');
+        // Find the corresponding "company-pages" section
+        const companyPagesSection = this.nextElementSibling;
+        const pageList = companyPagesSection.querySelector('ul');
 
-      // Clear previous entries
-      pageList.innerHTML = '';
+        // Clear previous entries
+        pageList.innerHTML = '';
 
-      // Populate the list with page names and revenue
-      pages.forEach(page => {
-        const listItem = document.createElement('li');
-        listItem.className = 'list-group-item';
-        listItem.textContent = ${page.name}: $${page.revenue};
-        pageList.appendChild(listItem);
+        // Populate the list with page names and revenue
+        pages.forEach(page => {
+          const listItem = document.createElement('li');
+          listItem.className = 'list-group-item';
+          listItem.textContent = `${page.name}: ${page.revenue}`;
+          pageList.appendChild(listItem);
+        });
+
+        // Toggle visibility of the company pages section
+        companyPagesSection.style.display = 
+          companyPagesSection.style.display === 'none' ? 'block' : 'none';
       });
-
-      // Toggle visibility of the company pages section
-      companyPagesSection.style.display = companyPagesSection.style.display === 'none' ? 'block' : 'none';
     });
   });
 </script>
