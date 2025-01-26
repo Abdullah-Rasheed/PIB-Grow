@@ -303,6 +303,7 @@
       </tr>
     </thead>
     <tbody id="modern-partner-table">
+      {% if partners %}
       {% for partner in partners %}
       <tr class="partner-row">
         <td>
@@ -312,12 +313,15 @@
             </a>
             <div class="company-pages mt-2" style="display: none;">
               <ul class="list-group">
-                <!-- Dynamically populate partner's pages -->
+                {% if partner.pages %}
                 {% for page in partner.pages %}
                 <li class="list-group-item">
                   {{ page.name }}: {{ page.revenue }}
                 </li>
                 {% endfor %}
+                {% else %}
+                <li class="list-group-item">No pages found.</li>
+                {% endif %}
               </ul>
             </div>
           </div>
@@ -345,6 +349,11 @@
         </td>
       </tr>
       {% endfor %}
+      {% else %}
+      <tr>
+        <td colspan="3" class="text-center">No partner data available.</td>
+      </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
@@ -355,11 +364,16 @@
     <h5 class="mb-0">Performance Metrics</h5>
   </div>
   <div class="card-body">
+    {% if performance.labels and performance.data %}
     <canvas id="performanceChart" height="150"></canvas>
+    {% else %}
+    <p class="text-center">No performance data available.</p>
+    {% endif %}
   </div>
 </div>
 
 <!-- JavaScript for Chart -->
+{% if performance.labels and performance.data %}
 <script>
   const ctx = document.getElementById('performanceChart').getContext('2d');
   new Chart(ctx, {
@@ -383,6 +397,7 @@
     },
   });
 </script>
+{% endif %}
 
 <!-- Page and Post Metrics -->
 <div class="card shadow-sm border-0">
@@ -391,16 +406,24 @@
   </div>
   <div class="card-body">
     <ul class="list-group">
+      {% if page_metrics %}
       {% for page in page_metrics %}
       <li class="list-group-item">
         <strong>{{ page.page_name }}</strong>
+        {% if page.metrics %}
         <ul>
           {% for metric in page.metrics %}
           <li>{{ metric.title }}: {{ metric.values[0] }}</li>
           {% endfor %}
         </ul>
+        {% else %}
+        <p>No metrics available for this page.</p>
+        {% endif %}
       </li>
       {% endfor %}
+      {% else %}
+      <li class="list-group-item text-center">No page-level metrics available.</li>
+      {% endif %}
     </ul>
   </div>
 </div>
@@ -411,19 +434,28 @@
   </div>
   <div class="card-body">
     <ul class="list-group">
+      {% if post_metrics %}
       {% for post in post_metrics %}
       <li class="list-group-item">
         <strong>Post ID: {{ post.post_id }}</strong>
+        {% if post.metrics %}
         <ul>
           {% for metric in post.metrics %}
           <li>{{ metric.title }}: {{ metric.values[0] }}</li>
           {% endfor %}
         </ul>
+        {% else %}
+        <p>No metrics available for this post.</p>
+        {% endif %}
       </li>
       {% endfor %}
+      {% else %}
+      <li class="list-group-item text-center">No post-level metrics available.</li>
+      {% endif %}
     </ul>
   </div>
 </div>
+
   
                     
       <footer class="footer pt-3  ">
