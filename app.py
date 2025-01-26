@@ -147,8 +147,8 @@ def dashboard():
         }]
 
         performance = {
-            'labels': labels if labels else ["No Data"],  # Handle missing labels
-            'data': revenue_data if revenue_data else [0]  # Handle missing data
+            'labels': labels,
+            'data': revenue_data
         }
 
         return render_template(
