@@ -303,30 +303,25 @@
       </tr>
     </thead>
     <tbody id="modern-partner-table">
-      {% if partners %}
       {% for partner in partners %}
       <tr class="partner-row">
+        <!-- Partner Name -->
         <td>
           <div class="d-flex flex-column">
-            <a href="#" class="partner-name" data-pages='{{ partner.pages | tojson | safe }}'>
-              {{ partner.name }}
-            </a>
+            <a href="#" 
+               class="partner-name" 
+               data-pages='{{ partner.pages | tojson | safe }}'>{{ partner.name }}</a>
+            <!-- Dropdown container for partner's pages -->
             <div class="company-pages mt-2" style="display: none;">
               <ul class="list-group">
-                {% if partner.pages %}
-                {% for page in partner.pages %}
-                <li class="list-group-item">
-                  {{ page.name }}: {{ page.revenue }}
-                </li>
-                {% endfor %}
-                {% else %}
-                <li class="list-group-item">No pages found.</li>
-                {% endif %}
+                <!-- Pages will be dynamically populated -->
               </ul>
             </div>
           </div>
         </td>
-        <td>{{ partner.total_revenue }}</td>
+        <!-- Total Revenue -->
+        <td>${{ partner.total_revenue }}</td>
+        <!-- Status Badge -->
         <td>
           <div class="status-tooltip position-relative">
             {% if partner.status == 'green' %}
@@ -349,34 +344,90 @@
         </td>
       </tr>
       {% endfor %}
-      {% else %}
-      <tr>
-        <td colspan="3" class="text-center">No partner data available.</td>
-      </tr>
-      {% endif %}
     </tbody>
   </table>
 </div>
 
-<!-- Performance Metrics Chart -->
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-gradient-primary text-white">
-    <h5 class="mb-0">Performance Metrics</h5>
-  </div>
-  <div class="card-body">
-    {% if performance.labels and performance.data %}
-    <canvas id="performanceChart" height="150"></canvas>
-    {% else %}
-    <p class="text-center">No performance data available.</p>
-    {% endif %}
+<script>
+  // Add event listeners for toggling the pages dropdown
+  document.querySelectorAll('.partner-name').forEach(function (element) {
+    element.addEventListener('click', function (event) {
+      event.preventDefault();
+
+      // Get the associated pages data from the 'data-pages' attribute
+      const pages = JSON.parse(this.getAttribute('data-pages'));
+
+      // Find the corresponding "company-pages" section
+      const companyPagesSection = this.nextElementSibling;
+      const pageList = companyPagesSection.querySelector('ul');
+
+      // Clear previous entries
+      pageList.innerHTML = '';
+
+      // Populate the list with page names and revenue
+      pages.forEach(page => {
+        const listItem = document.createElement('li');
+        listItem.className = 'list-group-item';
+        listItem.textContent = ${page.name}: $${page.revenue};
+        pageList.appendChild(listItem);
+      });
+
+      // Toggle visibility of the company pages section
+      companyPagesSection.style.display = companyPagesSection.style.display === 'none' ? 'block' : 'none';
+    });
+  });
+</script>
+
+<!-- Partner Tier Pages Section -->
+<div class="col-lg-12">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-gradient-secondary text-white pb-2 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Partner Tier Pages - Overview</h5>
+      <button class="btn btn-primary btn-sm shadow-sm">
+        <i class="bi bi-pencil"></i> Edit Partner Profile
+      </button>
+    </div>
+    <div class="container-fluid mt-4">
+      <!-- Partner Overview Section -->
+      <div class="row">
+        <!-- Partner Profile Card -->
+        <div class="col-lg-4 mb-4">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Partner Profile</h5>
+              <button class="btn btn-light btn-sm">
+                <i class="bi bi-pencil"></i> Edit Profile
+              </button>
+            </div>
+            <div class="card-body">
+              <h6>Company Name: <span class="text-muted">{{ partner.name }}</span></h6>
+              <h6>Email: <span class="text-muted">{{ partner.email }}</span></h6>
+              <h6>Total Revenue: <span class="text-muted">${{ partner.total_revenue }}</span></h6>
+              <h6>Revenue Formula: <span class="text-muted">Performance-based</span></h6>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Overview with Graph -->
+        <div class="col-lg-8 mb-4">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Performance Metrics</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="performanceChart" height="150"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- JavaScript for Chart -->
-{% if performance.labels and performance.data %}
 <script>
-  const ctx = document.getElementById('performanceChart').getContext('2d');
-  new Chart(ctx, {
+  // Performance Metrics Graph
+  const ctx3 = document.getElementById('performanceChart').getContext('2d');
+  new Chart(ctx3, {
     type: 'line',
     data: {
       labels: {{ performance.labels | tojson | safe }},
@@ -397,64 +448,67 @@
     },
   });
 </script>
-{% endif %}
 
-<!-- Page and Post Metrics -->
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-gradient-secondary text-white">
-    <h5 class="mb-0">Page-Level Metrics</h5>
-  </div>
-  <div class="card-body">
-    <ul class="list-group">
-      {% if page_metrics %}
-      {% for page in page_metrics %}
-      <li class="list-group-item">
-        <strong>{{ page.page_name }}</strong>
-        {% if page.metrics %}
-        <ul>
-          {% for metric in page.metrics %}
-          <li>{{ metric.title }}: {{ metric.values[0] }}</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p>No metrics available for this page.</p>
-        {% endif %}
-      </li>
-      {% endfor %}
-      {% else %}
-      <li class="list-group-item text-center">No page-level metrics available.</li>
-      {% endif %}
-    </ul>
-  </div>
-</div>
 
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-gradient-secondary text-white">
-    <h5 class="mb-0">Post-Level Metrics</h5>
-  </div>
-  <div class="card-body">
-    <ul class="list-group">
-      {% if post_metrics %}
-      {% for post in post_metrics %}
-      <li class="list-group-item">
-        <strong>Post ID: {{ post.post_id }}</strong>
-        {% if post.metrics %}
-        <ul>
-          {% for metric in post.metrics %}
-          <li>{{ metric.title }}: {{ metric.values[0] }}</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p>No metrics available for this post.</p>
-        {% endif %}
-      </li>
-      {% endfor %}
-      {% else %}
-      <li class="list-group-item text-center">No post-level metrics available.</li>
-      {% endif %}
-    </ul>
-  </div>
-</div>
+              
+              <!-- CSS -->
+              <style>
+              
+                .btn:hover {
+                  transform: scale(1.05);
+                }
+              
+                table th, table td {
+                  font-size: 0.9rem;
+                }
+              
+                .text-danger {
+                  font-weight: bold;
+                }
+              </style>
+              
+        
+        <!-- JavaScript Animations -->
+        <script>
+          // Sort by Revenue
+          document.getElementById('sort-revenue').addEventListener('click', () => {
+            const table = document.getElementById('partner-table');
+            const rows = Array.from(table.rows);
+            rows.sort((a, b) => {
+              const revenueA = parseInt(a.cells[1].textContent.replace(/[^0-9]/g, ''));
+              const revenueB = parseInt(b.cells[1].textContent.replace(/[^0-9]/g, ''));
+              return revenueB - revenueA;
+            });
+            rows.forEach(row => table.appendChild(row));
+          });
+        
+          // Filter Red Partners
+          document.getElementById('filter-red').addEventListener('click', () => {
+            const rows = document.querySelectorAll('#partner-table tr');
+            rows.forEach(row => {
+              const status = row.cells[2].textContent;
+              row.style.display = status.includes('Red') ? '' : 'none';
+            });
+          });
+        
+          // Add hover animations
+          document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseover', () => card.classList.add('shadow-lg'));
+            card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
+          });
+        </script>         
+<div class="card shadow-lg mx-4 card-profile-bottom">
+  <div class="card-body p-3">
+    <div class="row gx-4">
+      <div class="col-auto"></div>
+      <div class="col-auto my-auto">
+        <div class="h-100">
+          <h2 class="mb-1">
+            Facebook Pages Overview
+          </h2>
+          
+<!-- Include Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   
                     
