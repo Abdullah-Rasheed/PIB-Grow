@@ -57,13 +57,85 @@ def dashboard():
 
     try:
         # Fetch user information
-        user_data = fetch_user_data(access_token)
+        user_url = "https://graph.facebook.com/v16.0/me"
+        user_params = {"fields": "name,email", "access_token": access_token}
+        user_response = requests.get(user_url, params=user_params)
+        user_response.raise_for_status()
+        user_data = user_response.json()
         user_name = user_data.get('name', 'Unknown User')
         user_email = user_data.get('email', 'Not Provided')
 
-        # Fetch pages and metrics
-        pages_data = fetch_pages_data(access_token)
-        partner_pages, total_revenue, labels, revenue_data, page_metrics, post_metrics = process_pages_data(access_token, pages_data)
+        # Fetch pages associated with the user
+        pages_url = "https://graph.facebook.com/v16.0/me/accounts"
+        pages_params = {"fields": "name,id", "access_token": access_token}
+        pages_response = requests.get(pages_url, params=pages_params)
+        pages_response.raise_for_status()
+        pages_data = pages_response.json().get('data', [])
+
+        partner_pages = []
+        total_revenue = 0
+        revenue_data = []
+        labels = []  # For monthly labels
+        page_metrics = []
+        post_metrics = []
+
+        for page in pages_data:
+            page_id = page['id']
+            page_name = page['name']
+
+            # Fetch monetization revenue
+            insights_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
+            insights_params = {
+                "metric": "estimated_revenue",
+                "period": "month",
+                "access_token": access_token
+            }
+            insights_response = requests.get(insights_url, params=insights_params)
+            if insights_response.status_code == 200:
+                insights_data = insights_response.json().get('data', [])
+                monthly_revenue = [
+                    float(entry['value']) for entry in insights_data if 'value' in entry
+                ]
+                total_page_revenue = sum(monthly_revenue)
+                total_revenue += total_page_revenue
+                labels = [entry['title'] for entry in insights_data]  # Update labels dynamically
+                partner_pages.append({'name': page_name, 'revenue': f"${total_page_revenue:,.2f}"})
+                revenue_data.extend(monthly_revenue)
+            else:
+                partner_pages.append({'name': page_name, 'revenue': "Revenue not found"})
+
+            # Fetch page-level metrics (e.g., reach, engagement)
+            page_performance_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
+            page_performance_params = {
+                "metric": "page_impressions,page_engaged_users,page_fans",
+                "period": "day",
+                "access_token": access_token,
+            }
+            page_performance_response = requests.get(page_performance_url, params=page_performance_params)
+            if page_performance_response.status_code == 200:
+                page_metrics.append({
+                    "page_name": page_name,
+                    "metrics": page_performance_response.json().get('data', [])
+                })
+
+            # Fetch post-level metrics
+            posts_url = f"https://graph.facebook.com/v16.0/{page_id}/posts"
+            posts_params = {"fields": "id,message,created_time", "access_token": access_token}
+            posts_response = requests.get(posts_url, params=posts_params)
+            posts_data = posts_response.json().get('data', [])
+            for post in posts_data:
+                post_id = post['id']
+                post_metrics_url = f"https://graph.facebook.com/v16.0/{post_id}/insights"
+                post_metrics_params = {
+                    "metric": "post_impressions,post_engaged_users,post_reactions_like_total",
+                    "access_token": access_token,
+                }
+                post_metrics_response = requests.get(post_metrics_url, params=post_metrics_params)
+                if post_metrics_response.status_code == 200:
+                    post_metrics.append({
+                        "post_id": post_id,
+                        "metrics": post_metrics_response.json().get('data', [])
+                    })
 
         # Aggregate partner data
         partners = [{
@@ -75,128 +147,24 @@ def dashboard():
         }]
 
         performance = {
-           
-            'labels': labels or ["No data available"],
-            'data': revenue_data or [0]
+            'labels': labels if labels else ["No Data"],  # Handle missing labels
+            'data': revenue_data if revenue_data else [0]  # Handle missing data
         }
 
         return render_template(
             'dashboard.html',
             partners=partners,
             performance=performance,
-            page_metrics=page_metrics or [{"message": "No data found"}],
-            post_metrics=post_metrics or [{"message": "No data found"}]
+            page_metrics=page_metrics,
+            post_metrics=post_metrics
         )
 
     except requests.exceptions.RequestException as e:
         print("Error fetching data from Facebook:", e)
-        return render_template('dashboard.html', error_message="An error occurred while fetching data from Facebook.")
+        return "An error occurred while fetching data from Facebook.", 500
     except Exception as e:
         print("Unexpected error:", e)
-        return render_template('dashboard.html', error_message="An unexpected error occurred.")
-
-# Helper functions
-def fetch_user_data(access_token):
-    try:
-        user_url = "https://graph.facebook.com/v16.0/me"
-        user_params = {"fields": "name,email", "access_token": access_token}
-        user_response = requests.get(user_url, params=user_params)
-        user_response.raise_for_status()
-        return user_response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching user data: {e}")
-        return {"name": "Unknown User", "email": "Not Provided"}
-
-def fetch_pages_data(access_token):
-    try:
-        pages_url = "https://graph.facebook.com/v16.0/me/accounts"
-        pages_params = {"fields": "name,id", "access_token": access_token}
-        pages_response = requests.get(pages_url, params=pages_params)
-        pages_response.raise_for_status()
-        return pages_response.json().get('data', [])
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching pages data: {e}")
-        return []
-
-def process_pages_data(access_token, pages_data):
-    partner_pages = []
-    total_revenue = 0
-    labels = []
-    revenue_data = []
-    page_metrics = []
-    post_metrics = []
-
-    for page in pages_data:
-        page_id = page['id']
-        page_name = page['name']
-
-        # Fetch monetization revenue
-        insights_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
-        insights_params = {
-            "metric": "estimated_revenue",
-            "period": "month",
-            "access_token": access_token
-        }
-        try:
-            insights_response = requests.get(insights_url, params=insights_params)
-            if insights_response.status_code == 200:
-                insights_data = insights_response.json().get('data', [])
-                monthly_revenue = [
-                    float(entry.get('value', 0)) for entry in insights_data if 'value' in entry
-                ]
-                total_page_revenue = sum(monthly_revenue)
-                total_revenue += total_page_revenue
-                labels = [entry['title'] for entry in insights_data]
-                partner_pages.append({'name': page_name, 'revenue': f"${total_page_revenue:,.2f}"})
-                revenue_data.extend(monthly_revenue)
-            else:
-                partner_pages.append({'name': page_name, 'revenue': "Revenue not found"})
-        except Exception as e:
-            print(f"Error fetching revenue data for page {page_name}: {e}")
-            partner_pages.append({'name': page_name, 'revenue': "No data found"})
-
-        # Fetch page-level metrics
-        try:
-            page_performance_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
-            page_performance_params = {
-                "metric": "page_impressions,page_engaged_users,page_fans",
-                "period": "day",
-                "access_token": access_token
-            }
-            page_performance_response = requests.get(page_performance_url, params=page_performance_params)
-            if page_performance_response.status_code == 200:
-                page_metrics.append({
-                    "page_name": page_name,
-                    "metrics": page_performance_response.json().get('data', [])
-                })
-        except Exception as e:
-            print(f"Error fetching page metrics for {page_name}: {e}")
-            page_metrics.append({"page_name": page_name, "message": "No data found"})
-
-        # Fetch post-level metrics
-        try:
-            posts_url = f"https://graph.facebook.com/v16.0/{page_id}/posts"
-            posts_params = {"fields": "id,message,created_time", "access_token": access_token}
-            posts_response = requests.get(posts_url, params=posts_params)
-            posts_data = posts_response.json().get('data', [])
-            for post in posts_data:
-                post_id = post['id']
-                post_metrics_url = f"https://graph.facebook.com/v16.0/{post_id}/insights"
-                post_metrics_params = {
-                    "metric": "post_impressions,post_engaged_users,post_reactions_like_total",
-                    "access_token": access_token
-                }
-                post_metrics_response = requests.get(post_metrics_url, params=post_metrics_params)
-                if post_metrics_response.status_code == 200:
-                    post_metrics.append({
-                        "post_id": post_id,
-                        "metrics": post_metrics_response.json().get('data', [])
-                    })
-        except Exception as e:
-            print(f"Error fetching post metrics for page {page_name}: {e}")
-            post_metrics.append({"page_name": page_name, "message": "No data found"})
-
-    return partner_pages, total_revenue, labels, revenue_data, page_metrics, post_metrics
+        return "An unexpected error occurred.", 500
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
