@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import requests
 import os
 
@@ -89,7 +89,7 @@ def dashboard():
                 "access_token": access_token
             }
             insights_response = requests.get(insights_url, params=insights_params)
-            
+
             if insights_response.status_code == 200:
                 insights_data = insights_response.json().get('data', [])
                 monthly_revenue = [
@@ -131,9 +131,79 @@ def dashboard():
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
 
+# Route: Fetch Page Metrics
+@app.route('/api/fetch_page_metrics/<page_name>', methods=['GET'])
+def fetch_page_metrics(page_name):
+    access_token = session.get('access_token')
+    if not access_token:
+        return jsonify({"error": "User not authenticated."}), 401
 
+    try:
+        # Retrieve the page ID by matching the page name
+        pages_url = "https://graph.facebook.com/v16.0/me/accounts"
+        pages_params = {"fields": "name,id", "access_token": access_token}
+        pages_response = requests.get(pages_url, params=pages_params)
+        pages_response.raise_for_status()
+        pages_data = pages_response.json().get('data', [])
 
+        page_id = next((page['id'] for page in pages_data if page['name'] == page_name), None)
+        if not page_id:
+            return jsonify({"error": "Page not found."}), 404
 
+        # Fetch page-level metrics
+        page_metrics_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
+        page_metrics_params = {
+            "metric": "page_impressions,page_engaged_users,page_fans,page_views_total",
+            "period": "day",
+            "access_token": access_token
+        }
+        page_metrics_response = requests.get(page_metrics_url, params=page_metrics_params)
+        page_metrics_response.raise_for_status()
+        page_metrics_data = page_metrics_response.json().get('data', [])
+
+        # Fetch post-level metrics
+        posts_url = f"https://graph.facebook.com/v16.0/{page_id}/posts"
+        posts_params = {
+            "fields": "id,message,insights.metric(post_impressions,post_engaged_users)",
+            "access_token": access_token
+        }
+        posts_response = requests.get(posts_url, params=posts_params)
+        posts_response.raise_for_status()
+        posts_data = posts_response.json().get('data', [])
+
+        # Parse metrics
+        page_metrics = {
+            'reach': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_impressions'), 0),
+            'engagement': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_engaged_users'), 0),
+            'likes': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_fans'), 0),
+            'views': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_views_total'), 0),
+        }
+
+        post_metrics = {
+            'labels': [post['message'][:20] + '...' if 'message' in post else 'No Title' for post in posts_data],
+            'values': [
+                next((insight['values'][0]['value'] for insight in post['insights']['data'] if insight['name'] == 'post_engaged_users'), 0)
+                for post in posts_data
+            ]
+        }
+
+        revenue_data = {
+            'labels': [f"Month {i+1}" for i in range(len(post_metrics['values']))],
+            'values': post_metrics['values']
+        }
+
+        return jsonify({
+            "page_metrics": page_metrics,
+            "post_metrics": post_metrics,
+            "revenue_data": revenue_data
+        })
+
+    except requests.exceptions.RequestException as e:
+        print("Error fetching page metrics:", e)
+        return jsonify({"error": "An error occurred while fetching metrics."}), 500
+    except Exception as e:
+        print("Unexpected error:", e)
+        return jsonify({"error": "An unexpected error occurred."}), 500
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
