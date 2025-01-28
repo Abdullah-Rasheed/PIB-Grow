@@ -495,170 +495,137 @@
           <h2 class="mb-1">
             Facebook Pages Overview
           </h2>
-<script>
-// Updated frontend JavaScript code for limited Facebook metrics
+// Frontend JavaScript for handling page metrics
 document.addEventListener('DOMContentLoaded', function() {
-  // Function to fetch page metrics from backend
-  async function fetchPageMetrics(pageName, startDate = null, endDate = null) {
-    try {
-      let url = `/api/fetch_page_metrics/${encodeURIComponent(pageName)}`;
-      if (startDate && endDate) {
-        url += `?start_date=${startDate}&end_date=${endDate}`;
-      }
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Network response was not ok');
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching metrics:', error);
-      return null;
+    let currentCharts = {
+        impressionsChart: null,
+        fansChart: null,
+        viewsChart: null,
+        engagementsChart: null
+    };
+
+    function createMetricsDisplay(metrics) {
+        const metricsContainer = document.getElementById('page-metrics');
+        metricsContainer.innerHTML = `
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Impressions</h5>
+                            <p class="display-6">${formatNumber(metrics.impressions.total)}</p>
+                            <canvas id="impressionsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">New Fans</h5>
+                            <p class="display-6">${formatNumber(metrics.new_fans.total)}</p>
+                            <canvas id="fansChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Page Views</h5>
+                            <p class="display-6">${formatNumber(metrics.page_views.total)}</p>
+                            <canvas id="viewsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Engagements</h5>
+                            <p class="display-6">${formatNumber(metrics.engagements.total)}</p>
+                            <canvas id="engagementsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Create charts for each metric
+        createChart('impressionsChart', metrics.impressions.daily_data, 'Impressions', '#007bff');
+        createChart('fansChart', metrics.new_fans.daily_data, 'New Fans', '#28a745');
+        createChart('viewsChart', metrics.page_views.daily_data, 'Page Views', '#17a2b8');
+        createChart('engagementsChart', metrics.engagements.daily_data, 'Engagements', '#dc3545');
     }
-  }
 
-  // Function to format numbers
-  function formatNumber(num) {
-    if (num === 'N/A') return 'N/A';
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
-    }
-    return num.toString();
-  }
-
-  // Function to update metrics display
-  function updateMetricsDisplay(data) {
-    const metricsDiv = document.getElementById('additional-metrics');
-    if (!data) {
-      metricsDiv.innerHTML = '<p class="text-danger">Failed to load metrics</p>';
-      return;
-    }
-
-    const { page_metrics, time_series, posts } = data;
-
-    metricsDiv.innerHTML = `
-      <div class="performance-summary">
-        <div class="metric-card">
-          <h3>Page Reach</h3>
-          <p>${formatNumber(page_metrics.reach)}</p>
-        </div>
-        <div class="metric-card">
-          <h3>Engagement</h3>
-          <p>${formatNumber(page_metrics.engagement)}</p>
-        </div>
-        <div class="metric-card">
-          <h3>Followers</h3>
-          <p>${formatNumber(page_metrics.followers)}</p>
-        </div>
-      </div>
-      <div class="recent-posts mt-4">
-        <h3>Recent Posts</h3>
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${posts.map(post => `
-                <tr>
-                  <td>${new Date(post.date).toLocaleDateString()}</td>
-                  <td>${post.message}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-
-    // Update engagement chart
-    updateEngagementChart(time_series);
-  }
-
-  // Function to update engagement chart
-  function updateEngagementChart(timeSeriesData) {
-    const ctx = document.getElementById('pageRevenueChart').getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(0, 123, 255, 0.5)');
-    gradient.addColorStop(1, 'rgba(0, 123, 255, 0)');
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: timeSeriesData.labels.map(date => new Date(date).toLocaleDateString()),
-        datasets: [{
-          label: 'Daily Engagement',
-          data: timeSeriesData.values,
-          borderColor: '#007bff',
-          backgroundColor: gradient,
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { grid: { display: false } },
-          y: { 
-            grid: { color: 'rgba(200, 200, 200, 0.2)' },
-            beginAtZero: true
-          }
-        },
-        plugins: { 
-          legend: { display: true },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return `Engagement: ${formatNumber(context.raw)}`;
-              }
-            }
-          }
+    function createChart(canvasId, data, label, color) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (currentCharts[canvasId]) {
+            currentCharts[canvasId].destroy();
         }
-      }
-    });
-  }
 
-  // Event listeners for page rows
-  document.querySelectorAll('.page-row').forEach(row => {
-    row.addEventListener('click', async function() {
-      const pageName = this.dataset.page;
-      document.getElementById('selected-page-name').textContent = 
-        this.querySelector('td').textContent.trim();
-      
-      const metrics = await fetchPageMetrics(pageName);
-      updateMetricsDisplay(metrics);
-    });
-  });
-
-  // Date range filter
-  document.getElementById('filter-date-range').addEventListener('click', async function() {
-    const startDate = document.getElementById('start-date').value;
-    const endDate = document.getElementById('end-date').value;
-    const selectedPage = document.getElementById('selected-page-name').textContent;
-
-    if (startDate && endDate && selectedPage !== 'Select a Page') {
-      const metrics = await fetchPageMetrics(selectedPage, startDate, endDate);
-      updateMetricsDisplay(metrics);
-    } else {
-      alert('Please select both dates and a page');
+        currentCharts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(item => new Date(item.date).toLocaleDateString()),
+                datasets: [{
+                    label: label,
+                    data: data.map(item => item.value),
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false
+                    },
+                    y: {
+                        beginAtZero: true,
+                        display: false
+                    }
+                }
+            }
+        });
     }
-  });
 
-  // Back to overview button
-  document.getElementById('back-to-overview').addEventListener('click', function() {
-    document.getElementById('selected-page-name').textContent = 'Select a Page';
-    document.getElementById('additional-metrics').innerHTML = '';
-    const canvas = document.getElementById('pageRevenueChart');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  });
+    function formatNumber(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+
+    // Event listener for page selection
+    document.querySelectorAll('[data-page-id]').forEach(element => {
+        element.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const pageId = this.dataset.pageId;
+            const pageName = this.dataset.pageName;
+            
+            try {
+                const response = await fetch(`/api/page_metrics/${pageId}`);
+                if (!response.ok) throw new Error('Failed to fetch metrics');
+                
+                const metrics = await response.json();
+                document.getElementById('selected-page-name').textContent = pageName;
+                createMetricsDisplay(metrics);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to load page metrics');
+            }
+        });
+    });
 });
-  <script>
                     
       <footer class="footer pt-3  ">
         <div class="container-fluid">
