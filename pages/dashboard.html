@@ -495,201 +495,241 @@
           <h2 class="mb-1">
             Facebook Pages Overview
           </h2>
-  <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Pages Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/2.3.0/alpine.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-</head>
-<body class="bg-gray-50">
-    <div class="min-h-screen" x-data="dashboard()">
-        <!-- Header -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4">
-                <div class="flex justify-between items-center">
-                    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-                    <div class="flex items-center space-x-4">
-                        <div class="text-right">
-                            <p class="text-sm text-gray-600">Welcome,</p>
-                            <p class="text-lg font-semibold text-gray-900">{{ partner['name'] }}</p>
-                        </div>
-                        <a href="/logout" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                            Logout
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </header>
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto py-6 px-4">
-            <!-- Overview Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white rounded-xl shadow p-6 transform hover:scale-105 transition-transform duration-300">
-                    <h3 class="text-lg font-semibold text-gray-600 mb-2">Total Pages</h3>
-                    <p class="text-3xl font-bold text-blue-600">{{ partner['pages'].length }}</p>
-                </div>
-                <div class="bg-white rounded-xl shadow p-6 transform hover:scale-105 transition-transform duration-300">
-                    <h3 class="text-lg font-semibold text-gray-600 mb-2">Total Engagement</h3>
-                    <p class="text-3xl font-bold text-green-600">{{ partner['total_engagement'].toLocaleString() }}</p>
-                </div>
-                <div class="bg-white rounded-xl shadow p-6 transform hover:scale-105 transition-transform duration-300">
-                    <h3 class="text-lg font-semibold text-gray-600 mb-2">Active Pages</h3>
-                    <p class="text-3xl font-bold text-indigo-600">
-                        {{ partner['pages'].filter(p => p.status === 'Processed').length }}
-                    </p>
-                </div>
-                <div class="bg-white rounded-xl shadow p-6 transform hover:scale-105 transition-transform duration-300">
-                    <h3 class="text-lg font-semibold text-gray-600 mb-2">Account Status</h3>
-                    <p class="text-3xl font-bold" :class="partner['status'] === 'active' ? 'text-green-600' : 'text-yellow-600'">
-                        {{ partner['status'].charAt(0).toUpperCase() + partner['status'].slice(1) }}
-                    </p>
-                </div>
-            </div>
+<!-- Metrics Section -->
+<div class="metrics-container">
+  <div class="sidebar">
+    <h2>Your Pages</h2>
+    <ul id="page-list">
+      <!-- Dynamically populated page names -->
+    </ul>
+  </div>
 
-            <!-- Performance Chart -->
-            <div class="bg-white rounded-xl shadow mb-8">
-                <div class="p-6">
-                    <h2 class="text-xl font-bold text-gray-900 mb-4">Overall Performance</h2>
-                    <canvas id="performanceChart" height="100"></canvas>
-                </div>
-            </div>
+  <div class="content">
+    <div id="metrics-display" class="hidden">
+      <h2 id="page-title">Page Metrics</h2>
+      <div class="stats">
+        <div class="stat-card">
+          <h3>Reach</h3>
+          <p id="reach">0</p>
+        </div>
+        <div class="stat-card">
+          <h3>Engagement</h3>
+          <p id="engagement">0</p>
+        </div>
+        <div class="stat-card">
+          <h3>Followers</h3>
+          <p id="followers">0</p>
+        </div>
+      </div>
 
-            <!-- Pages Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <template x-for="page in partner['pages']" :key="page.name">
-                    <div class="bg-white rounded-xl shadow hover:shadow-lg transition-shadow duration-300">
-                        <div class="p-6">
-                            <div class="flex justify-between items-start mb-4">
-                                <h3 class="text-lg font-bold text-gray-900" x-text="page.name"></h3>
-                                <span 
-                                    class="px-3 py-1 rounded-full text-sm font-semibold"
-                                    :class="page.status === 'Processed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
-                                    x-text="page.status">
-                                </span>
-                            </div>
-                            
-                            <!-- Page Metrics -->
-                            <div x-show="selectedPage === page.name" 
-                                 x-transition:enter="transition ease-out duration-300"
-                                 x-transition:enter-start="opacity-0 transform -translate-y-4"
-                                 x-transition:enter-end="opacity-100 transform translate-y-0"
-                                 class="space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-gray-50 rounded-lg p-4">
-                                        <p class="text-sm text-gray-600">Reach</p>
-                                        <p class="text-xl font-bold text-gray-900" x-text="pageMetrics.reach || 0"></p>
-                                    </div>
-                                    <div class="bg-gray-50 rounded-lg p-4">
-                                        <p class="text-sm text-gray-600">Engagement</p>
-                                        <p class="text-xl font-bold text-gray-900" x-text="pageMetrics.engagement || 0"></p>
-                                    </div>
-                                </div>
-                                
-                                <!-- Recent Posts -->
-                                <div x-show="pagePosts.length > 0">
-                                    <h4 class="text-md font-semibold text-gray-700 mb-2">Recent Posts</h4>
-                                    <div class="space-y-2">
-                                        <template x-for="post in pagePosts" :key="post.id">
-                                            <div class="bg-gray-50 rounded-lg p-3">
-                                                <p class="text-sm text-gray-600" x-text="post.message"></p>
-                                                <p class="text-xs text-gray-500 mt-1" x-text="formatDate(post.date)"></p>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                            </div>
+      <div class="chart-container">
+        <canvas id="engagement-chart"></canvas>
+      </div>
 
-                            <!-- View Details Button -->
-                            <button 
-                                @click="loadPageMetrics(page.name)"
-                                class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                View Details
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </main>
+      <div class="posts">
+        <h3>Recent Posts</h3>
+        <ul id="posts-list">
+          <!-- Dynamically populated posts -->
+        </ul>
+      </div>
     </div>
 
-    <script>
-        function dashboard() {
-            return {
-                partner: {{ partner|tojson|safe }},
-                performance: {{ performance|tojson|safe }},
-                selectedPage: null,
-                pageMetrics: {},
-                pagePosts: [],
-                
-                init() {
-                    this.initPerformanceChart();
-                },
+    <div id="no-selection" class="message">
+      <h3>Select a page to view metrics</h3>
+    </div>
+  </div>
+</div>
 
-                async loadPageMetrics(pageName) {
-                    this.selectedPage = pageName;
-                    try {
-                        const response = await fetch(`/api/fetch_page_metrics/${encodeURIComponent(pageName)}`);
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                            this.pageMetrics = data.page_metrics;
-                            this.pagePosts = data.posts;
-                        } else {
-                            console.error('Error fetching page metrics:', data.error);
-                        }
-                    } catch (error) {
-                        console.error('Failed to fetch page metrics:', error);
-                    }
-                },
+<!-- CSS -->
+<style>
+  .metrics-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
 
-                formatDate(dateString) {
-                    return moment(dateString).format('MMM D, YYYY');
-                },
+  .sidebar {
+    width: 25%;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
 
-                initPerformanceChart() {
-                    const ctx = document.getElementById('performanceChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: this.performance.labels,
-                            datasets: [{
-                                label: 'Daily Engagement',
-                                data: this.performance.data,
-                                borderColor: 'rgb(59, 130, 246)',
-                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                title: {
-                                    display: false
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            return value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
+  .sidebar h2 {
+    margin-bottom: 10px;
+  }
+
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .sidebar ul li {
+    padding: 10px;
+    background: #ffffff;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .sidebar ul li:hover {
+    transform: translateY(-3px);
+    background: #f1f1f1;
+  }
+
+  .content {
+    width: 75%;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    flex: 1;
+    margin: 0 10px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .chart-container {
+    margin: 20px 0;
+  }
+
+  .posts ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .posts ul li {
+    padding: 10px;
+    background: #ffffff;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .message {
+    text-align: center;
+    margin-top: 50px;
+    font-size: 18px;
+    color: #888;
+  }
+</style>
+
+<!-- JavaScript -->
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const pageList = document.getElementById("page-list");
+    const metricsDisplay = document.getElementById("metrics-display");
+    const noSelection = document.getElementById("no-selection");
+    const reach = document.getElementById("reach");
+    const engagement = document.getElementById("engagement");
+    const followers = document.getElementById("followers");
+    const pageTitle = document.getElementById("page-title");
+    const postsList = document.getElementById("posts-list");
+
+    async function fetchPages() {
+      try {
+        const response = await fetch("/api/fetch_pages");
+        const data = await response.json();
+
+        if (data.error) {
+          alert(data.error);
+          return;
         }
-    </script>
-</body>
+
+        data.pages.forEach((page) => {
+          const li = document.createElement("li");
+          li.textContent = page.name;
+          li.addEventListener("click", () => fetchMetrics(page.name));
+          pageList.appendChild(li);
+        });
+      } catch (error) {
+        console.error("Error fetching pages:", error);
+      }
+    }
+
+    async function fetchMetrics(pageName) {
+      try {
+        const response = await fetch(`/api/fetch_page_metrics/${pageName}`);
+        const data = await response.json();
+
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        // Populate metrics
+        reach.textContent = data.page_metrics.reach;
+        engagement.textContent = data.page_metrics.engagement;
+        followers.textContent = data.page_metrics.followers;
+        pageTitle.textContent = pageName;
+
+        // Populate recent posts
+        postsList.innerHTML = "";
+        data.posts.forEach((post) => {
+          const li = document.createElement("li");
+          li.textContent = `${post.date} - ${post.message}`;
+          postsList.appendChild(li);
+        });
+
+        // Show metrics display
+        metricsDisplay.classList.remove("hidden");
+        noSelection.classList.add("hidden");
+
+        // Render chart
+        renderChart(data.page_metrics);
+      } catch (error) {
+        console.error("Error fetching metrics:", error);
+      }
+    }
+
+    function renderChart(metrics) {
+      const ctx = document.getElementById("engagement-chart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Reach", "Engagement", "Followers"],
+          datasets: [
+            {
+              label: "Metrics",
+              data: [metrics.reach, metrics.engagement, metrics.followers],
+              backgroundColor: ["#4caf50", "#2196f3", "#ff9800"],
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+          },
+        },
+      });
+    }
+
+    // Fetch and display pages on load
+    fetchPages();
+  });
+</script>
+
       </footer>
     </div>
   </main>
