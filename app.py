@@ -153,85 +153,57 @@ def fetch_page_metrics(page_name):
         return jsonify({"error": "User not authenticated"}), 401
 
     try:
-        # Get date range from query parameters or use default (last 30 days)
-        start_date = request.args.get('start_date', 
-            (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
-        end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
-
-        # Fetch page ID using pages_show_list permission
+        # Fetch pages list
         pages_response = requests.get(
             "https://graph.facebook.com/v18.0/me/accounts",
             params={"fields": "name,id", "access_token": access_token}
         )
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
-        
-        page_id = next((page['id'] for page in pages_data 
-            if page['name'].lower() == page_name.lower()), None)
-        
-        if not page_id:
-            return jsonify({"error": "Page not found"}), 404
 
-        # Fetch page insights using pages_read_engagement permission
+        # Debugging: Print available pages
+        print("Available Pages:", [page['name'] for page in pages_data])
+
+        # Find the page ID
+        page_id = None
+        for page in pages_data:
+            if page['name'].lower() == page_name.lower():
+                page_id = page['id']
+                break
+
+        if not page_id:
+            return jsonify({"error": f"Page '{page_name}' not found. Available pages: {[p['name'] for p in pages_data]}"}), 404
+
+        # Fetch insights
         insights_response = requests.get(
             f"https://graph.facebook.com/v18.0/{page_id}/insights",
             params={
                 "metric": "page_impressions,page_post_engagements,page_fans_add",
                 "period": "day",
-                "since": start_date,
-                "until": end_date,
                 "access_token": access_token
             }
         )
         insights_response.raise_for_status()
         insights_data = insights_response.json().get('data', [])
 
-        # Process page metrics from available data
+        # Process metrics
         page_metrics = {
-            'reach': sum(metric['values'][0]['value'] 
-                for metric in insights_data 
-                if metric['name'] == 'page_impressions'),
-            'engagement': sum(metric['values'][0]['value'] 
-                for metric in insights_data 
-                if metric['name'] == 'page_post_engagements'),
-            'followers': next((metric['values'][0]['value'] 
-                for metric in insights_data 
-                if metric['name'] == 'page_fans_add'), 0)
+            'reach': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_impressions'),
+            'engagement': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_post_engagements'),
+            'followers': next((metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_fans_add'), 0)
         }
 
-        # Fetch basic post data (without detailed metrics)
+        # Fetch posts
         posts_response = requests.get(
             f"https://graph.facebook.com/v18.0/{page_id}/posts",
-            params={
-                "fields": "id,message,created_time",
-                "access_token": access_token,
-                "since": start_date,
-                "until": end_date,
-                "limit": 10
-            }
+            params={"fields": "id,message,created_time", "access_token": access_token, "limit": 10}
         )
         posts_response.raise_for_status()
         posts_data = posts_response.json().get('data', [])
 
-        # Process engagement data from available insights
-        engagement_data = next((metric['values'] 
-            for metric in insights_data 
-            if metric['name'] == 'page_post_engagements'), [])
-        
-        # Create time series data for charts
-        time_series_data = {
-            'labels': [entry['end_time'][:10] for entry in engagement_data],
-            'values': [entry['value'] for entry in engagement_data]
-        }
-
         return jsonify({
             "page_metrics": page_metrics,
-            "time_series": time_series_data,
-            "posts": [{
-                'id': post['id'],
-                'message': post.get('message', 'No message')[:50],
-                'date': post['created_time'][:10]
-            } for post in posts_data]
+            "posts": [{"id": post['id'], "message": post.get('message', 'No message')[:50], "date": post['created_time'][:10]} for post in posts_data]
         })
 
     except requests.exceptions.RequestException as e:
