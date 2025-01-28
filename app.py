@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 import requests
 import os
+from datetime import datetime, timedelta
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
 app.secret_key = os.urandom(24)  # Ensure secret key is set for session management
@@ -25,7 +26,7 @@ def facebook_callback():
 
     try:
         # Exchange code for access token
-        token_url = 'https://graph.facebook.com/v22.0/oauth/access_token'
+        token_url = 'https://graph.facebook.com/v18.0/oauth/access_token'
         token_params = {
             'client_id': FACEBOOK_APP_ID,
             'redirect_uri': REDIRECT_URI,
@@ -57,7 +58,7 @@ def dashboard():
 
     try:
         # Fetch user information
-        user_url = "https://graph.facebook.com/v22.0/me"
+        user_url = "https://graph.facebook.com/v18.0/me"
         user_params = {"fields": "name,email", "access_token": access_token}
         user_response = requests.get(user_url, params=user_params)
         user_response.raise_for_status()
@@ -66,55 +67,68 @@ def dashboard():
         user_email = user_data.get('email', 'Not Provided')
 
         # Fetch pages associated with the user
-        pages_url = "https://graph.facebook.com/v22.0/me/accounts"
+        pages_url = "https://graph.facebook.com/v18.0/me/accounts"
         pages_params = {"fields": "name,id", "access_token": access_token}
         pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
 
         partner_pages = []
-        total_revenue = 0
-        revenue_data = []
-        labels = []  # For monthly labels
+        total_engagement = 0
+        engagement_data = []
+        labels = []
 
         for page in pages_data:
             page_id = page.get('id')
             page_name = page.get('name', 'Unknown Page')
 
-            # Fetch monetization revenue for the page
-            insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
+            # Fetch page insights using pages_read_engagement permission
+            insights_url = f"https://graph.facebook.com/v18.0/{page_id}/insights"
             insights_params = {
-                "metric": "estimated_revenue",
-                "period": "month",
+                "metric": "page_engaged_users",
+                "period": "day",
                 "access_token": access_token
             }
             insights_response = requests.get(insights_url, params=insights_params)
 
             if insights_response.status_code == 200:
                 insights_data = insights_response.json().get('data', [])
-                monthly_revenue = [
-                    float(entry.get('value', 0)) for entry in insights_data if 'value' in entry
+                daily_engagement = [
+                    float(entry.get('value', 0)) 
+                    for metric in insights_data 
+                    for entry in metric.get('values', [])
                 ]
-                total_page_revenue = sum(monthly_revenue)
-                total_revenue += total_page_revenue
+                total_page_engagement = sum(daily_engagement)
+                total_engagement += total_page_engagement
 
-                labels.extend([entry.get('title', 'No Title') for entry in insights_data])
-                partner_pages.append({'name': page_name, 'revenue': f"${total_page_revenue:,.2f}"})
-                revenue_data.extend(monthly_revenue)
+                labels.extend([entry.get('end_time', 'No Date')[:10] 
+                    for metric in insights_data 
+                    for entry in metric.get('values', [])])
+                
+                partner_pages.append({
+                    'name': page_name, 
+                    'engagement': total_page_engagement,
+                    'status': 'Processed'
+                })
+                engagement_data.extend(daily_engagement)
             else:
-                partner_pages.append({'name': page_name, 'revenue': "Revenue not found"})
+                partner_pages.append({
+                    'name': page_name, 
+                    'engagement': 0,
+                    'status': 'Pending'
+                })
 
         partners = [{
             'name': user_name,
             'email': user_email,
             'pages': partner_pages,
-            'total_revenue': f"${total_revenue:,.2f}",
-            'status': 'green' if total_revenue > 50000 else 'yellow' if total_revenue > 30000 else 'red'
+            'total_engagement': total_engagement,
+            'status': 'active' if total_engagement > 0 else 'inactive'
         }]
 
         performance = {
             'labels': labels,
-            'data': revenue_data
+            'data': engagement_data
         }
 
         return render_template(
@@ -132,74 +146,100 @@ def dashboard():
         return "An unexpected error occurred.", 500
 
 # Route: Fetch Page Metrics
-@app.route('/api/fetch_page_metrics/<page_name>', methods=['GET'])
+@app.route('/api/fetch_page_metrics/<page_name>')
 def fetch_page_metrics(page_name):
     access_token = session.get('access_token')
     if not access_token:
-        return jsonify({"error": "User not authenticated."}), 401
+        return jsonify({"error": "User not authenticated"}), 401
 
     try:
-        pages_url = "https://graph.facebook.com/v22.0/me/accounts"
-        pages_params = {"fields": "name,id", "access_token": access_token}
-        pages_response = requests.get(pages_url, params=pages_params)
+        # Get date range from query parameters or use default (last 30 days)
+        start_date = request.args.get('start_date', 
+            (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
+        end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+
+        # Fetch page ID using pages_show_list permission
+        pages_response = requests.get(
+            "https://graph.facebook.com/v18.0/me/accounts",
+            params={"fields": "name,id", "access_token": access_token}
+        )
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
-
-        page_id = next((page['id'] for page in pages_data if page['name'] == page_name), None)
+        
+        page_id = next((page['id'] for page in pages_data 
+            if page['name'].lower() == page_name.lower()), None)
+        
         if not page_id:
-            return jsonify({"error": "Page not found."}), 404
+            return jsonify({"error": "Page not found"}), 404
 
-        page_metrics_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
-        page_metrics_params = {
-            "metric": "page_impressions,page_fans,page_views_total",
-            "period": "day",
-            "access_token": access_token
-        }
-        page_metrics_response = requests.get(page_metrics_url, params=page_metrics_params)
-        page_metrics_response.raise_for_status()
-        page_metrics_data = page_metrics_response.json().get('data', [])
+        # Fetch page insights using pages_read_engagement permission
+        insights_response = requests.get(
+            f"https://graph.facebook.com/v18.0/{page_id}/insights",
+            params={
+                "metric": "page_impressions,page_engaged_users,page_fans",
+                "period": "day",
+                "since": start_date,
+                "until": end_date,
+                "access_token": access_token
+            }
+        )
+        insights_response.raise_for_status()
+        insights_data = insights_response.json().get('data', [])
 
-        posts_url = f"https://graph.facebook.com/v22.0/{page_id}/posts"
-        posts_params = {
-            "fields": "id,message,insights.metric(post_impressions,post_engaged_users)",
-            "access_token": access_token
+        # Process page metrics from available data
+        page_metrics = {
+            'reach': sum(metric['values'][0]['value'] 
+                for metric in insights_data 
+                if metric['name'] == 'page_impressions'),
+            'engagement': sum(metric['values'][0]['value'] 
+                for metric in insights_data 
+                if metric['name'] == 'page_engaged_users'),
+            'followers': next((metric['values'][0]['value'] 
+                for metric in insights_data 
+                if metric['name'] == 'page_fans'), 0)
         }
-        posts_response = requests.get(posts_url, params=posts_params)
+
+        # Fetch basic post data (without detailed metrics)
+        posts_response = requests.get(
+            f"https://graph.facebook.com/v18.0/{page_id}/posts",
+            params={
+                "fields": "id,message,created_time",
+                "access_token": access_token,
+                "since": start_date,
+                "until": end_date,
+                "limit": 10
+            }
+        )
         posts_response.raise_for_status()
         posts_data = posts_response.json().get('data', [])
 
-        page_metrics = {
-            'reach': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_impressions'), 0),
-            'engagement': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_engaged_users'), 0),
-            'likes': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_fans'), 0),
-            'views': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_views_total'), 0),
-        }
-
-        post_metrics = {
-            'labels': [post['message'][:20] + '...' if 'message' in post else 'No Title' for post in posts_data],
-            'values': [
-                next((insight['values'][0]['value'] for insight in post['insights']['data'] if insight['name'] == 'post_engaged_users'), 0)
-                for post in posts_data
-            ]
-        }
-
-        revenue_data = {
-            'labels': [f"Month {i+1}" for i in range(len(post_metrics['values']))],
-            'values': post_metrics['values']
+        # Process engagement data from available insights
+        engagement_data = next((metric['values'] 
+            for metric in insights_data 
+            if metric['name'] == 'page_engaged_users'), [])
+        
+        # Create time series data for charts
+        time_series_data = {
+            'labels': [entry['end_time'][:10] for entry in engagement_data],
+            'values': [entry['value'] for entry in engagement_data]
         }
 
         return jsonify({
             "page_metrics": page_metrics,
-            "post_metrics": post_metrics,
-            "revenue_data": revenue_data
+            "time_series": time_series_data,
+            "posts": [{
+                'id': post['id'],
+                'message': post.get('message', 'No message')[:50],
+                'date': post['created_time'][:10]
+            } for post in posts_data]
         })
 
     except requests.exceptions.RequestException as e:
-        print("Error fetching page metrics:", e)
-        return jsonify({"error": "An error occurred while fetching metrics."}), 500
+        print(f"API request error: {str(e)}")
+        return jsonify({"error": "Failed to fetch metrics from Facebook"}), 500
     except Exception as e:
-        print("Unexpected error:", e)
-        return jsonify({"error": "An unexpected error occurred."}), 500
+        print(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 # Serve static assets
 @app.route('/assets/<path:filename>')
