@@ -151,7 +151,7 @@ def fetch_page_metrics(page_name):
 
         page_metrics_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
         page_metrics_params = {
-            "metric": "page_impressions,page_engaged_users,page_fans,page_views_total",
+            "metric": "page_impressions,page_fans,page_views_total",
             "period": "day",
             "access_token": access_token
         }
