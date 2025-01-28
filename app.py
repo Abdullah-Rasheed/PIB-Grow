@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 import requests
 import os
 
@@ -25,7 +25,7 @@ def facebook_callback():
 
     try:
         # Exchange code for access token
-        token_url = 'https://graph.facebook.com/v21.0/oauth/access_token'
+        token_url = 'https://graph.facebook.com/v22.0/oauth/access_token'
         token_params = {
             'client_id': FACEBOOK_APP_ID,
             'redirect_uri': REDIRECT_URI,
@@ -57,7 +57,7 @@ def dashboard():
 
     try:
         # Fetch user information
-        user_url = "https://graph.facebook.com/v21.0/me"
+        user_url = "https://graph.facebook.com/v22.0/me"
         user_params = {"fields": "name,email", "access_token": access_token}
         user_response = requests.get(user_url, params=user_params)
         user_response.raise_for_status()
@@ -66,7 +66,7 @@ def dashboard():
         user_email = user_data.get('email', 'Not Provided')
 
         # Fetch pages associated with the user
-        pages_url = "https://graph.facebook.com/v21.0/me/accounts"
+        pages_url = "https://graph.facebook.com/v22.0/me/accounts"
         pages_params = {"fields": "name,id", "access_token": access_token}
         pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
@@ -82,7 +82,7 @@ def dashboard():
             page_name = page.get('name', 'Unknown Page')
 
             # Fetch monetization revenue for the page
-            insights_url = f"https://graph.facebook.com/v21.0/{page_id}/insights"
+            insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
             insights_params = {
                 "metric": "estimated_revenue",
                 "period": "month",
@@ -139,7 +139,7 @@ def fetch_page_metrics(page_name):
         return jsonify({"error": "User not authenticated."}), 401
 
     try:
-        pages_url = "https://graph.facebook.com/v21.0/me/accounts"
+        pages_url = "https://graph.facebook.com/v22.0/me/accounts"
         pages_params = {"fields": "name,id", "access_token": access_token}
         pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
@@ -149,7 +149,7 @@ def fetch_page_metrics(page_name):
         if not page_id:
             return jsonify({"error": "Page not found."}), 404
 
-        page_metrics_url = f"https://graph.facebook.com/v21.0/{page_id}/insights"
+        page_metrics_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
         page_metrics_params = {
             "metric": "page_impressions,page_engaged_users,page_fans,page_views_total",
             "period": "day",
@@ -159,7 +159,7 @@ def fetch_page_metrics(page_name):
         page_metrics_response.raise_for_status()
         page_metrics_data = page_metrics_response.json().get('data', [])
 
-        posts_url = f"https://graph.facebook.com/v21.0/{page_id}/posts"
+        posts_url = f"https://graph.facebook.com/v22.0/{page_id}/posts"
         posts_params = {
             "fields": "id,message,insights.metric(post_impressions,post_engaged_users)",
             "access_token": access_token
