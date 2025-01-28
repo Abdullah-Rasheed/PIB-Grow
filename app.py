@@ -55,7 +55,7 @@ def facebook_callback():
 
     try:
         # Exchange code for access token
-        token_url = 'https://graph.facebook.com/v18.0/oauth/access_token'
+        token_url = 'https://graph.facebook.com/v22.0/oauth/access_token'
         token_params = {
             'client_id': FACEBOOK_APP_ID,
             'redirect_uri': REDIRECT_URI,
@@ -91,7 +91,7 @@ def dashboard():
     access_token = session.get('access_token')
     try:
         # Fetch user information
-        user_url = "https://graph.facebook.com/v18.0/me"
+        user_url = "https://graph.facebook.com/v22.0/me"
         user_params = {
             "fields": "name,email",
             "access_token": access_token
@@ -103,7 +103,7 @@ def dashboard():
         user_email = user_data.get('email', 'Not Provided')
 
         # Fetch pages with extended permissions
-        pages_url = "https://graph.facebook.com/v18.0/me/accounts"
+        pages_url = "https://graph.facebook.com/v22.0/me/accounts"
         pages_params = {
             "fields": "name,id,access_token",  # Added access_token to fields
             "access_token": access_token
@@ -129,7 +129,7 @@ def dashboard():
             page_token = page['access_token']  # Use page-specific token
 
             # Fetch page insights using page token
-            insights_url = f"https://graph.facebook.com/v18.0/{page_id}/insights"
+            insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
             insights_params = {
                 "metric": "page_engaged_users",
                 "period": "day",
@@ -204,7 +204,7 @@ def fetch_page_metrics(page_name):
         page_tokens = session.get('page_tokens', {})
         
         # Find the page ID and token
-        pages_url = "https://graph.facebook.com/v18.0/me/accounts"
+        pages_url = "https://graph.facebook.com/v22.0/me/accounts"
         pages_response = requests.get(
             pages_url,
             params={
@@ -231,7 +231,7 @@ def fetch_page_metrics(page_name):
 
         # Fetch insights using page token
         insights_response = requests.get(
-            f"https://graph.facebook.com/v18.0/{page_id}/insights",
+            f"https://graph.facebook.com/v22.0/{page_id}/insights?metric=",
             params={
                 "metric": "page_impressions,page_post_engagements,page_fans_add",
                 "period": "day",
@@ -250,7 +250,7 @@ def fetch_page_metrics(page_name):
 
         # Fetch posts using page token
         posts_response = requests.get(
-            f"https://graph.facebook.com/v18.0/{page_id}/posts",
+            f"https://graph.facebook.com/v22.0/{page_id}/posts",
             params={
                 "fields": "id,message,created_time",
                 "access_token": page_token,
