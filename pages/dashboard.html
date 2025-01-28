@@ -496,219 +496,168 @@
             Facebook Pages Overview
           </h2>
 
-<!-- Include Chart.js Library -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+// Updated frontend JavaScript code for limited Facebook metrics
+document.addEventListener('DOMContentLoaded', function() {
+  // Function to fetch page metrics from backend
+  async function fetchPageMetrics(pageName, startDate = null, endDate = null) {
+    try {
+      let url = `/api/fetch_page_metrics/${encodeURIComponent(pageName)}`;
+      if (startDate && endDate) {
+        url += `?start_date=${startDate}&end_date=${endDate}`;
+      }
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching metrics:', error);
+      return null;
+    }
+  }
 
-<!-- Page-Specific Breakdown Section -->
-<div class="row">
-  <!-- Facebook Pages Overview -->
-  <div class="col-12 mb-4">
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Your Pages</h5>
+  // Function to format numbers
+  function formatNumber(num) {
+    if (num === 'N/A') return 'N/A';
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  }
+
+  // Function to update metrics display
+  function updateMetricsDisplay(data) {
+    const metricsDiv = document.getElementById('additional-metrics');
+    if (!data) {
+      metricsDiv.innerHTML = '<p class="text-danger">Failed to load metrics</p>';
+      return;
+    }
+
+    const { page_metrics, time_series, posts } = data;
+
+    metricsDiv.innerHTML = `
+      <div class="performance-summary">
+        <div class="metric-card">
+          <h3>Page Reach</h3>
+          <p>${formatNumber(page_metrics.reach)}</p>
+        </div>
+        <div class="metric-card">
+          <h3>Engagement</h3>
+          <p>${formatNumber(page_metrics.engagement)}</p>
+        </div>
+        <div class="metric-card">
+          <h3>Followers</h3>
+          <p>${formatNumber(page_metrics.followers)}</p>
+        </div>
       </div>
-      <div class="card-body">
+      <div class="recent-posts mt-4">
+        <h3>Recent Posts</h3>
         <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="bg-light">
+          <table class="table">
+            <thead>
               <tr>
-                <th>Page Name</th>
-                <th>Revenue</th>
-                <th>Status</th>
+                <th>Date</th>
+                <th>Message</th>
               </tr>
             </thead>
-            <tbody id="pages-list"></tbody> <!-- Dynamically populated -->
+            <tbody>
+              ${posts.map(post => `
+                <tr>
+                  <td>${new Date(post.date).toLocaleDateString()}</td>
+                  <td>${post.message}</td>
+                </tr>
+              `).join('')}
+            </tbody>
           </table>
         </div>
       </div>
-    </div>
-  </div>
+    `;
 
-  <!-- Page-Specific Metrics -->
-  <div class="col-12 mb-4">
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-gradient-secondary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Page-Specific Metrics</h5>
-        <button class="btn btn-primary btn-sm" id="back-to-overview">
-          <i class="bi bi-arrow-left"></i> Back to Overview
-        </button>
-      </div>
-      <div class="card-body">
-        <h6>Page Name: <span id="selected-page-name" class="text-muted">Select a Page</span></h6>
-        
-        <!-- Empty Div for Additional Metrics -->
-        <div id="additional-metrics" class="mt-4"></div>
-
-        <div class="mt-4">
-          <h6>Revenue Trends</h6>
-          <canvas id="pageRevenueChart" height="300"></canvas>
-        </div>
-
-        <div class="mt-4">
-          <h6>Post Performance</h6>
-          <canvas id="postPerformanceChart" height="300"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Date Range Filter Section -->
-<div class="date-range-filter mb-3">
-  <label for="date-range" class="form-label">Select Date Range:</label>
-  <input type="date" id="start-date" class="form-control d-inline-block w-auto">
-  to
-  <input type="date" id="end-date" class="form-control d-inline-block w-auto">
-  <button class="btn btn-primary btn-sm ms-2" id="filter-date-range">Apply</button>
-</div>
-
-<script>
-  // Fetch Pages List from Flask API
-  async function fetchPages() {
-    try {
-      const response = await fetch('/pages');
-      const pagesData = await response.json();
-      const pagesList = document.getElementById("pages-list");
-      pagesList.innerHTML = ''; // Clear existing content
-
-      pagesData.forEach(page => {
-        const row = document.createElement("tr");
-        row.classList.add("page-row");
-        row.dataset.pageId = page.id;
-        row.innerHTML = `
-          <td><i class="bi bi-file-text me-2 text-primary"></i>${page.name}</td>
-          <td>$${page.revenue.toFixed(2)}</td>
-          <td class="text-${page.status === 'Processed' ? 'success' : 'danger'}">${page.status}</td>
-        `;
-        pagesList.appendChild(row);
-      });
-
-      // Add event listeners for row click
-      document.querySelectorAll('.page-row').forEach(row => {
-        row.addEventListener('click', () => {
-          const pageId = row.dataset.pageId;
-          fetchPageMetrics(pageId);
-        });
-      });
-    } catch (error) {
-      console.error('Error fetching pages:', error);
-    }
+    // Update engagement chart
+    updateEngagementChart(time_series);
   }
 
-  // Fetch Performance Metrics for Selected Page
-  async function fetchPageMetrics(pageId) {
-    try {
-      const response = await fetch(`/page_metrics/${pageId}`);
-      const metricsData = await response.json();
+  // Function to update engagement chart
+  function updateEngagementChart(timeSeriesData) {
+    const ctx = document.getElementById('pageRevenueChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(0, 123, 255, 0.5)');
+    gradient.addColorStop(1, 'rgba(0, 123, 255, 0)');
 
-      document.getElementById('selected-page-name').textContent = metricsData.page_name;
-
-      // Display Metrics
-      const metricsDiv = document.getElementById('additional-metrics');
-      metricsDiv.innerHTML = `
-        <table class="table table-striped">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Reach</td><td>${metricsData.reach}</td></tr>
-            <tr><td>Engagement</td><td>${metricsData.engagement}</td></tr>
-            <tr><td>Likes/Followers</td><td>${metricsData.likes}</td></tr>
-            <tr><td>Views</td><td>${metricsData.views}</td></tr>
-          </tbody>
-        </table>
-      `;
-
-      // Update Revenue Trends Chart
-      updateRevenueChart(metricsData.revenue_trends);
-
-      // Update Post Performance Chart
-      updatePostPerformanceChart(metricsData.post_performance);
-    } catch (error) {
-      console.error('Error fetching page metrics:', error);
-    }
-  }
-
-  // Update Revenue Trends Chart
-  function updateRevenueChart(revenueData) {
-    const ctxRevenue = document.getElementById('pageRevenueChart').getContext('2d');
-    const gradientRevenue = ctxRevenue.createLinearGradient(0, 0, 0, 400);
-    gradientRevenue.addColorStop(0, 'rgba(0, 123, 255, 0.5)');
-    gradientRevenue.addColorStop(1, 'rgba(0, 123, 255, 0)');
-
-    new Chart(ctxRevenue, {
+    new Chart(ctx, {
       type: 'line',
       data: {
-        labels: revenueData.labels,
+        labels: timeSeriesData.labels.map(date => new Date(date).toLocaleDateString()),
         datasets: [{
-          label: 'Revenue ($)',
-          data: revenueData.values,
+          label: 'Daily Engagement',
+          data: timeSeriesData.values,
           borderColor: '#007bff',
-          backgroundColor: gradientRevenue,
+          backgroundColor: gradient,
           fill: true,
-          borderWidth: 2,
-        }],
+          tension: 0.4,
+          borderWidth: 2
+        }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-      },
+        scales: {
+          x: { grid: { display: false } },
+          y: { 
+            grid: { color: 'rgba(200, 200, 200, 0.2)' },
+            beginAtZero: true
+          }
+        },
+        plugins: { 
+          legend: { display: true },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `Engagement: ${formatNumber(context.raw)}`;
+              }
+            }
+          }
+        }
+      }
     });
   }
 
-  // Update Post Performance Chart
-  function updatePostPerformanceChart(postData) {
-    const ctxPost = document.getElementById('postPerformanceChart').getContext('2d');
-    const gradientPost = ctxPost.createLinearGradient(0, 0, 0, 400);
-    gradientPost.addColorStop(0, 'rgba(255, 99, 132, 0.5)');
-    gradientPost.addColorStop(1, 'rgba(255, 99, 132, 0)');
-
-    new Chart(ctxPost, {
-      type: 'bar',
-      data: {
-        labels: postData.labels,
-        datasets: [{
-          label: 'Post Interactions',
-          data: postData.values,
-          backgroundColor: 'rgba(255, 99, 132, 0.7)',
-          borderWidth: 1,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-      },
+  // Event listeners for page rows
+  document.querySelectorAll('.page-row').forEach(row => {
+    row.addEventListener('click', async function() {
+      const pageName = this.dataset.page;
+      document.getElementById('selected-page-name').textContent = 
+        this.querySelector('td').textContent.trim();
+      
+      const metrics = await fetchPageMetrics(pageName);
+      updateMetricsDisplay(metrics);
     });
-  }
-
-  // Event listener for Back to Overview button
-  document.getElementById('back-to-overview').addEventListener('click', function () {
-    document.getElementById('selected-page-name').textContent = 'Select a Page';
-    document.getElementById('additional-metrics').innerHTML = '';
-    const ctxPost = document.getElementById('postPerformanceChart').getContext('2d');
-    ctxPost.clearRect(0, 0, ctxPost.canvas.width, ctxPost.canvas.height);
   });
 
-  // Date Range Filter Logic
-  document.getElementById('filter-date-range').addEventListener('click', function () {
+  // Date range filter
+  document.getElementById('filter-date-range').addEventListener('click', async function() {
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
+    const selectedPage = document.getElementById('selected-page-name').textContent;
 
-    if (startDate && endDate) {
-      alert(`Filtering data from ${startDate} to ${endDate}`);
-      // Implement actual filtering logic based on dates here
+    if (startDate && endDate && selectedPage !== 'Select a Page') {
+      const metrics = await fetchPageMetrics(selectedPage, startDate, endDate);
+      updateMetricsDisplay(metrics);
     } else {
-      alert('Please select both start and end dates.');
+      alert('Please select both dates and a page');
     }
   });
 
-  // Initial page fetch on page load
-  fetchPages();
-</script>
- 
+  // Back to overview button
+  document.getElementById('back-to-overview').addEventListener('click', function() {
+    document.getElementById('selected-page-name').textContent = 'Select a Page';
+    document.getElementById('additional-metrics').innerHTML = '';
+    const canvas = document.getElementById('pageRevenueChart');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+});
                     
       <footer class="footer pt-3  ">
         <div class="container-fluid">
