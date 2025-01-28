@@ -1,23 +1,23 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 import requests
 import os
-import traceback  # For detailed error logging
+from datetime import datetime, timedelta
 
 app = Flask(__name__, static_folder='assets', template_folder='pages')
-app.secret_key = os.urandom(24)  # Secure session key
+app.secret_key = os.urandom(24)  # Ensure secret key is set for session management
 
 # Environment variables
 FACEBOOK_APP_ID = os.getenv('FACEBOOK_APP_ID', '407721285698090')
 FACEBOOK_APP_SECRET = os.getenv('FACEBOOK_APP_SECRET', '4775235855fcd971cfe6828ab439b4fc')
 REDIRECT_URI = os.getenv('REDIRECT_URI', 'https://pib-grow.vercel.app/auth/callback')
 
-# 🔹 Sign-Up Page
+# Route: Sign-Up
 @app.route('/')
 @app.route('/sign-up')
 def sign_up():
     return render_template('sign-up.html', facebook_app_id=FACEBOOK_APP_ID, redirect_uri=REDIRECT_URI)
 
-# 🔹 Facebook OAuth Callback
+# Route: Facebook OAuth Callback
 @app.route('/auth/callback')
 def facebook_callback():
     code = request.args.get('code')
@@ -41,154 +41,119 @@ def facebook_callback():
             return "Error: Failed to retrieve access token.", 500
 
         session['access_token'] = access_token
-        print("✅ Access Token Retrieved:", access_token)
+        print("Access token successfully retrieved:", access_token)  # Debug log
 
         return redirect(url_for('dashboard'))
 
     except requests.exceptions.RequestException as e:
-        print("❌ Error during token exchange:", str(e))
+        print("Error during token exchange:", e)
         return "An error occurred during authentication.", 500
 
-# 🔹 Dashboard Route
+# Route: Dashboard
 @app.route('/dashboard')
 def dashboard():
     access_token = session.get('access_token')
     if not access_token:
-        print("⚠️ User not authenticated - Redirecting to sign-up")
         return redirect(url_for('sign_up'))
 
     try:
-        # Fetch user data
-        user_response = requests.get(
-            "https://graph.facebook.com/v18.0/me",
-            params={"fields": "name,email", "access_token": access_token}
-        )
+        # Fetch user information
+        user_url = "https://graph.facebook.com/v18.0/me"
+        user_params = {"fields": "name,email", "access_token": access_token}
+        user_response = requests.get(user_url, params=user_params)
         user_response.raise_for_status()
         user_data = user_response.json()
-
         user_name = user_data.get('name', 'Unknown User')
         user_email = user_data.get('email', 'Not Provided')
 
-        # Fetch pages
-        pages_response = requests.get(
-            "https://graph.facebook.com/v18.0/me/accounts",
-            params={"fields": "name,id", "access_token": access_token}
-        )
+        # Fetch pages associated with the user
+        pages_url = "https://graph.facebook.com/v18.0/me/accounts"
+        pages_params = {"fields": "name,id", "access_token": access_token}
+        pages_response = requests.get(pages_url, params=pages_params)
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
 
-        partner_pages = []
-        total_engagement = 0
-        engagement_data = []
-        labels = []
+        session['pages'] = pages_data  # Store pages in session for future use
 
-        for page in pages_data:
-            page_id, page_name = page.get('id'), page.get('name', 'Unknown Page')
-
-            # Fetch page insights
-            insights_response = requests.get(
-                f"https://graph.facebook.com/v18.0/{page_id}/insights",
-                params={"metric": "page_engaged_users", "period": "day", "access_token": access_token}
-            )
-
-            if insights_response.status_code == 200:
-                insights_data = insights_response.json().get('data', [])
-                daily_engagement = sum(
-                    float(entry.get('value', 0))
-                    for metric in insights_data
-                    for entry in metric.get('values', [])
-                )
-                total_engagement += daily_engagement
-                labels.extend([
-                    entry.get('end_time', 'No Date')[:10]
-                    for metric in insights_data
-                    for entry in metric.get('values', [])
-                ])
-                engagement_data.append(daily_engagement)
-            else:
-                daily_engagement = 0  # Set engagement to zero if request fails
-
-            partner_pages.append({'name': page_name, 'engagement': daily_engagement, 'status': 'Processed' if daily_engagement > 0 else 'Pending'})
-
-        partners = [{
-            'name': user_name,
-            'email': user_email,
-            'pages': partner_pages,
-            'total_engagement': total_engagement,
-            'status': 'active' if total_engagement > 0 else 'inactive'
-        }]
-
-        performance = {'labels': labels, 'data': engagement_data}
-
-        return render_template('dashboard.html', partners=partners, performance=performance, partner=partners[0])
+        return render_template('dashboard.html', user_name=user_name, user_email=user_email, pages=pages_data)
 
     except requests.exceptions.RequestException as e:
-        print("❌ API Request Error:", str(e))
+        print("Error fetching data from Facebook:", e)
         return "An error occurred while fetching data from Facebook.", 500
     except Exception as e:
-        print("❌ Unexpected Error:", traceback.format_exc())
+        print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
 
-# 🔹 Fetch Page Metrics API
-@app.route('/api/fetch_page_metrics/<page_name>')
-def fetch_page_metrics(page_name):
+# Route: Select Page and Store in Session
+@app.route('/select_page', methods=['POST'])
+def select_page():
+    page_id = request.form.get('page_id')
+    if not page_id:
+        return jsonify({"error": "No page ID provided."}), 400
+
+    session['selected_page_id'] = page_id
+    print("Selected Page ID:", page_id)  # Debug log
+    return redirect(url_for('fetch_page_metrics'))
+
+# Route: Fetch Page Metrics
+@app.route('/fetch_page_metrics')
+def fetch_page_metrics():
     access_token = session.get('access_token')
+    page_id = session.get('selected_page_id')
+
     if not access_token:
-        return jsonify({"error": "User not authenticated"}), 401
+        return jsonify({"error": "User not authenticated."}), 401
+
+    if not page_id:
+        return jsonify({"error": "No page selected."}), 400
 
     try:
-        # Fetch pages
-        pages_response = requests.get(
-            "https://graph.facebook.com/v18.0/me/accounts",
-            params={"fields": "name,id", "access_token": access_token}
-        )
-        pages_response.raise_for_status()
-        pages_data = pages_response.json().get('data', [])
-
-        page_id = next((page['id'] for page in pages_data if page['name'].lower() == page_name.lower()), None)
-        if not page_id:
-            return jsonify({"error": f"Page '{page_name}' not found."}), 404
-
-        # Fetch insights
-        insights_response = requests.get(
-            f"https://graph.facebook.com/v18.0/{page_id}/insights",
-            params={"metric": "page_impressions,page_post_engagements,page_fans_add", "period": "day", "access_token": access_token}
-        )
+        # Fetch insights for the selected page
+        insights_url = f"https://graph.facebook.com/v18.0/{page_id}/insights"
+        insights_params = {
+            "metric": "page_engaged_users,page_impressions,page_fans_add",
+            "period": "day",
+            "access_token": access_token
+        }
+        insights_response = requests.get(insights_url, params=insights_params)
         insights_response.raise_for_status()
         insights_data = insights_response.json().get('data', [])
 
-        # Process metrics
+        # Process insights data
         page_metrics = {
-            'reach': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_impressions'),
-            'engagement': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_post_engagements'),
-            'followers': next((metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_fans_add'), 0)
+            'engaged_users': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_engaged_users'),
+            'impressions': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_impressions'),
+            'new_followers': sum(metric['values'][0]['value'] for metric in insights_data if metric['name'] == 'page_fans_add')
         }
 
-        # Fetch posts
-        posts_response = requests.get(
-            f"https://graph.facebook.com/v18.0/{page_id}/posts",
-            params={"fields": "id,message,created_time", "access_token": access_token, "limit": 10}
-        )
+        # Fetch recent posts
+        posts_url = f"https://graph.facebook.com/v18.0/{page_id}/posts"
+        posts_params = {"fields": "id,message,created_time", "access_token": access_token, "limit": 5}
+        posts_response = requests.get(posts_url, params=posts_params)
         posts_response.raise_for_status()
         posts_data = posts_response.json().get('data', [])
 
-        return jsonify({
-            "page_metrics": page_metrics,
-            "posts": [{"id": post['id'], "message": post.get('message', 'No message')[:50], "date": post['created_time'][:10]} for post in posts_data]
-        })
+        posts = [
+            {
+                "id": post['id'],
+                "message": post.get('message', 'No message'),
+                "date": post['created_time'][:10]
+            } for post in posts_data
+        ]
+
+        return render_template('metrics.html', page_metrics=page_metrics, posts=posts)
 
     except requests.exceptions.RequestException as e:
-        print("❌ API Error:", str(e))
-        return jsonify({"error": "Failed to fetch metrics from Facebook"}), 500
+        print("Error fetching page metrics:", e)
+        return "An error occurred while fetching page metrics.", 500
     except Exception as e:
-        print("❌ Unexpected Error:", traceback.format_exc())
-        return jsonify({"error": "An unexpected error occurred"}), 500
+        print("Unexpected error:", e)
+        return "An unexpected error occurred.", 500
 
-# 🔹 Serve Static Assets
+# Serve static assets
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
     return send_from_directory(app.static_folder, filename)
 
-# 🔹 Run Flask App
 if __name__ == '__main__':
     app.run(debug=True)
