@@ -72,14 +72,14 @@ def dashboard():
         pages_response.raise_for_status()
         pages_data = pages_response.json().get('data', [])
 
-        # Prepare partner data
         partner_pages = []
         total_revenue = 0
         revenue_data = []
         labels = []  # For monthly labels
+
         for page in pages_data:
-            page_id = page['id']
-            page_name = page['name']
+            page_id = page.get('id')
+            page_name = page.get('name', 'Unknown Page')
 
             # Fetch monetization revenue for the page
             insights_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
@@ -93,17 +93,17 @@ def dashboard():
             if insights_response.status_code == 200:
                 insights_data = insights_response.json().get('data', [])
                 monthly_revenue = [
-                    float(entry['value']) for entry in insights_data if 'value' in entry
+                    float(entry.get('value', 0)) for entry in insights_data if 'value' in entry
                 ]
                 total_page_revenue = sum(monthly_revenue)
                 total_revenue += total_page_revenue
-                labels = [entry['title'] for entry in insights_data]  # Update labels dynamically
+
+                labels.extend([entry.get('title', 'No Title') for entry in insights_data])
                 partner_pages.append({'name': page_name, 'revenue': f"${total_page_revenue:,.2f}"})
                 revenue_data.extend(monthly_revenue)
             else:
                 partner_pages.append({'name': page_name, 'revenue': "Revenue not found"})
 
-        # Aggregate partner data
         partners = [{
             'name': user_name,
             'email': user_email,
@@ -139,7 +139,6 @@ def fetch_page_metrics(page_name):
         return jsonify({"error": "User not authenticated."}), 401
 
     try:
-        # Retrieve the page ID by matching the page name
         pages_url = "https://graph.facebook.com/v16.0/me/accounts"
         pages_params = {"fields": "name,id", "access_token": access_token}
         pages_response = requests.get(pages_url, params=pages_params)
@@ -150,7 +149,6 @@ def fetch_page_metrics(page_name):
         if not page_id:
             return jsonify({"error": "Page not found."}), 404
 
-        # Fetch page-level metrics
         page_metrics_url = f"https://graph.facebook.com/v16.0/{page_id}/insights"
         page_metrics_params = {
             "metric": "page_impressions,page_engaged_users,page_fans,page_views_total",
@@ -161,7 +159,6 @@ def fetch_page_metrics(page_name):
         page_metrics_response.raise_for_status()
         page_metrics_data = page_metrics_response.json().get('data', [])
 
-        # Fetch post-level metrics
         posts_url = f"https://graph.facebook.com/v16.0/{page_id}/posts"
         posts_params = {
             "fields": "id,message,insights.metric(post_impressions,post_engaged_users)",
@@ -171,7 +168,6 @@ def fetch_page_metrics(page_name):
         posts_response.raise_for_status()
         posts_data = posts_response.json().get('data', [])
 
-        # Parse metrics
         page_metrics = {
             'reach': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_impressions'), 0),
             'engagement': next((metric['values'][0]['value'] for metric in page_metrics_data if metric['name'] == 'page_engaged_users'), 0),
