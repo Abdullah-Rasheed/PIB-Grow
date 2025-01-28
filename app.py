@@ -176,7 +176,7 @@ def fetch_page_metrics(page_name):
         insights_response = requests.get(
             f"https://graph.facebook.com/v18.0/{page_id}/insights",
             params={
-                "metric": "page_impressions,page_engaged_users,page_fans",
+                "metric": "page_impressions,page_post_engagements,page_fans_add",
                 "period": "day",
                 "since": start_date,
                 "until": end_date,
@@ -193,10 +193,10 @@ def fetch_page_metrics(page_name):
                 if metric['name'] == 'page_impressions'),
             'engagement': sum(metric['values'][0]['value'] 
                 for metric in insights_data 
-                if metric['name'] == 'page_engaged_users'),
+                if metric['name'] == 'page_post_engagements'),
             'followers': next((metric['values'][0]['value'] 
                 for metric in insights_data 
-                if metric['name'] == 'page_fans'), 0)
+                if metric['name'] == 'page_fans_add'), 0)
         }
 
         # Fetch basic post data (without detailed metrics)
@@ -216,7 +216,7 @@ def fetch_page_metrics(page_name):
         # Process engagement data from available insights
         engagement_data = next((metric['values'] 
             for metric in insights_data 
-            if metric['name'] == 'page_engaged_users'), [])
+            if metric['name'] == 'page_post_engagements'), [])
         
         # Create time series data for charts
         time_series_data = {
