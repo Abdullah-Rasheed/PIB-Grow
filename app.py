@@ -196,12 +196,6 @@ def dashboard():
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
 
-from flask import Flask, jsonify, session
-import requests
-from flask_login import login_required
-
-app = Flask(__name__)
-
 @app.route('/api/fetch_page_metrics/<page_name>')
 @login_required
 def fetch_page_metrics(page_name):
@@ -241,7 +235,7 @@ def fetch_page_metrics(page_name):
         insights_response = requests.get(
             insights_url,
             params={
-                "metric": "page_impressions,page_post_engagements,page_fans_add",
+                "metric": "page_impressions,page_post_engagements,page_fans",
                 "period": "day",
                 "access_token": page_token
             }
@@ -256,7 +250,7 @@ def fetch_page_metrics(page_name):
         page_metrics = {
             "reach": get_metric_value("page_impressions"),
             "engagement": get_metric_value("page_post_engagements"),
-            "followers": get_metric_value("page_fans_add")  # Total followers instead of daily new followers
+            "followers": get_metric_value("page_fans")  # Total followers instead of daily new followers
         }
 
         # Fetch latest posts
