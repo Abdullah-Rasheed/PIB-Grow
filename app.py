@@ -195,6 +195,20 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+@app.route('/api/fetch_pages')
+@login_required
+def fetch_pages():
+    try:
+        pages_url = "https://graph.facebook.com/v18.0/me/accounts"
+        response = requests.get(
+            pages_url,
+            params={"fields": "name,id", "access_token": session['access_token']}
+        )
+        response.raise_for_status()
+        pages = response.json().get('data', [])
+        return jsonify({"pages": pages})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/fetch_page_metrics/<page_name>')
 @login_required
