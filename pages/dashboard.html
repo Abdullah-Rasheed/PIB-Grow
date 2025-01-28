@@ -297,11 +297,17 @@
             <a href="#" 
                class="partner-name" 
                data-pages='{{ partner.pages | tojson | safe }}'>{{ partner.name }}</a>
+            
             <!-- Dropdown container for partner's pages -->
             <div class="company-pages mt-2" style="display: none;">
               <ul class="list-group">
                 <!-- Pages will be dynamically populated -->
               </ul>
+              <div class="page-metrics mt-3" style="display: none;">
+                <p><strong>Reach:</strong> <span class="reach-value">Loading...</span></p>
+                <p><strong>Engagement:</strong> <span class="engagement-value">Loading...</span></p>
+                <p><strong>New Followers:</strong> <span class="followers-value">Loading...</span></p>
+              </div>
             </div>
           </div>
         </td>
@@ -347,21 +353,56 @@
         // Find the corresponding "company-pages" section
         const companyPagesSection = this.nextElementSibling;
         const pageList = companyPagesSection.querySelector('ul');
+        const pageMetricsSection = companyPagesSection.querySelector('.page-metrics');
 
         // Clear previous entries
         pageList.innerHTML = '';
 
-        // Populate the list with page names and revenue
+        // Populate the list with page names
         pages.forEach(page => {
           const listItem = document.createElement('li');
           listItem.className = 'list-group-item';
-          listItem.textContent = `${page.name}: ${page.revenue}`;
+          listItem.innerHTML = `<a href="#" class="page-link" data-page-name="${page.name}">${page.name}</a>`;
           pageList.appendChild(listItem);
         });
 
         // Toggle visibility of the company pages section
         companyPagesSection.style.display = 
           companyPagesSection.style.display === 'none' ? 'block' : 'none';
+
+        // Add event listener for each page link
+        pageList.querySelectorAll('.page-link').forEach(pageLink => {
+          pageLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            
+            const pageName = this.getAttribute('data-page-name');
+
+            // Show loading text while fetching data
+            pageMetricsSection.style.display = 'block';
+            pageMetricsSection.querySelector('.reach-value').textContent = 'Loading...';
+            pageMetricsSection.querySelector('.engagement-value').textContent = 'Loading...';
+            pageMetricsSection.querySelector('.followers-value').textContent = 'Loading...';
+
+            // Fetch performance data
+            fetch(`/api/fetch_page_metrics/${pageName}`)
+              .then(response => response.json())
+              .then(data => {
+                if (data.error) {
+                  pageMetricsSection.querySelector('.reach-value').textContent = "Error fetching data";
+                  pageMetricsSection.querySelector('.engagement-value').textContent = "";
+                  pageMetricsSection.querySelector('.followers-value').textContent = "";
+                } else {
+                  pageMetricsSection.querySelector('.reach-value').textContent = data.page_metrics.reach;
+                  pageMetricsSection.querySelector('.engagement-value').textContent = data.page_metrics.engagement;
+                  pageMetricsSection.querySelector('.followers-value').textContent = data.page_metrics.followers;
+                }
+              })
+              .catch(error => {
+                console.error("Error fetching page metrics:", error);
+                pageMetricsSection.querySelector('.reach-value').textContent = "Failed to load data";
+              });
+          });
+        });
       });
     });
   });
@@ -486,249 +527,6 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-<div class="card shadow-lg mx-4 card-profile-bottom">
-  <div class="card-body p-3">
-    <div class="row gx-4">
-      <div class="col-auto"></div>
-      <div class="col-auto my-auto">
-        <div class="h-100">
-          <h2 class="mb-1">
-            Facebook Pages Overview
-          </h2>
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- Metrics Section -->
-<div class="metrics-container">
-  <div class="sidebar">
-    <h2>Your Pages</h2>
-    <ul id="page-list">
-      <!-- Dynamically populated page names -->
-    </ul>
-  </div>
-
-  <div class="content">
-    <div id="metrics-display" class="hidden">
-      <h2 id="page-title">Page Metrics</h2>
-      <div class="stats">
-        <div class="stat-card">
-          <h3>Reach</h3>
-          <p id="reach">0</p>
-        </div>
-        <div class="stat-card">
-          <h3>Engagement</h3>
-          <p id="engagement">0</p>
-        </div>
-        <div class="stat-card">
-          <h3>Followers</h3>
-          <p id="followers">0</p>
-        </div>
-      </div>
-
-      <div class="chart-container">
-        <canvas id="engagement-chart"></canvas>
-      </div>
-
-      <div class="posts">
-        <h3>Recent Posts</h3>
-        <ul id="posts-list">
-          <!-- Dynamically populated posts -->
-        </ul>
-      </div>
-    </div>
-
-    <div id="no-selection" class="message">
-      <h3>Select a page to view metrics</h3>
-    </div>
-  </div>
-</div>
-
-<!-- CSS -->
-<style>
-  .metrics-container {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-  }
-
-  .sidebar {
-    width: 25%;
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-
-  .sidebar h2 {
-    margin-bottom: 10px;
-  }
-
-  .sidebar ul {
-    list-style: none;
-    padding: 0;
-  }
-
-  .sidebar ul li {
-    padding: 10px;
-    background: #ffffff;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-
-  .sidebar ul li:hover {
-    transform: translateY(-3px);
-    background: #f1f1f1;
-  }
-
-  .content {
-    width: 75%;
-  }
-
-  .hidden {
-    display: none;
-  }
-
-  .stats {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .stat-card {
-    flex: 1;
-    margin: 0 10px;
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-
-  .chart-container {
-    margin: 20px 0;
-  }
-
-  .posts ul {
-    list-style: none;
-    padding: 0;
-  }
-
-  .posts ul li {
-    padding: 10px;
-    background: #ffffff;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .message {
-    text-align: center;
-    margin-top: 50px;
-    font-size: 18px;
-    color: #888;
-  }
-</style>
-
-<!-- JavaScript -->
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const pageList = document.getElementById("page-list");
-    const metricsDisplay = document.getElementById("metrics-display");
-    const noSelection = document.getElementById("no-selection");
-    const reach = document.getElementById("reach");
-    const engagement = document.getElementById("engagement");
-    const followers = document.getElementById("followers");
-    const pageTitle = document.getElementById("page-title");
-    const postsList = document.getElementById("posts-list");
-
-    async function fetchPages() {
-      try {
-        const response = await fetch("/api/fetch_pages");
-        const data = await response.json();
-
-        if (data.error) {
-          alert(data.error);
-          return;
-        }
-
-        data.pages.forEach((page) => {
-          const li = document.createElement("li");
-          li.textContent = page.name;
-          li.addEventListener("click", () => fetchMetrics(page.name));
-          pageList.appendChild(li);
-        });
-      } catch (error) {
-        console.error("Error fetching pages:", error);
-      }
-    }
-
-    async function fetchMetrics(pageName) {
-      try {
-        const response = await fetch(`/api/fetch_page_metrics/${pageName}`);
-        const data = await response.json();
-
-        if (data.error) {
-          alert(data.error);
-          return;
-        }
-
-        // Populate metrics
-        reach.textContent = data.page_metrics.reach;
-        engagement.textContent = data.page_metrics.engagement;
-        followers.textContent = data.page_metrics.followers;
-        pageTitle.textContent = pageName;
-
-        // Populate recent posts
-        postsList.innerHTML = "";
-        data.posts.forEach((post) => {
-          const li = document.createElement("li");
-          li.textContent = `${post.date} - ${post.message}`;
-          postsList.appendChild(li);
-        });
-
-        // Show metrics display
-        metricsDisplay.classList.remove("hidden");
-        noSelection.classList.add("hidden");
-
-        // Render chart
-        renderChart(data.page_metrics);
-      } catch (error) {
-        console.error("Error fetching metrics:", error);
-      }
-    }
-
-    function renderChart(metrics) {
-      const ctx = document.getElementById("engagement-chart").getContext("2d");
-      new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: ["Reach", "Engagement", "Followers"],
-          datasets: [
-            {
-              label: "Metrics",
-              data: [metrics.reach, metrics.engagement, metrics.followers],
-              backgroundColor: ["#4caf50", "#2196f3", "#ff9800"],
-              borderWidth: 1,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-          },
-        },
-      });
-    }
-
-    // Fetch and display pages on load
-    fetchPages();
-  });
-</script>
 
       </footer>
     </div>
