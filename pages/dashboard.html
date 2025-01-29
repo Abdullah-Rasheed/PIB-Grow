@@ -527,9 +527,7 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-<!DOCTYPE html>
-<html lang="en">
-<head>
+
     <meta charset="UTF-8">
     <title>Facebook Metrics Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
@@ -647,12 +645,35 @@
             border-radius: 8px;
             margin: 1rem 0;
         }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text);
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard">
+        <div class="header">
+            <h1>Facebook Pages Dashboard</h1>
+            <p>Select a page to view its performance metrics</p>
+        </div>
+
         <div class="pages-list" id="pagesList">
-            <!-- Pages will be populated here -->
+            {% for page in partner.pages %}
+            <div class="page-card" onclick="loadPageMetrics('{{ page.name }}')">
+                {{ page.name }}
+            </div>
+            {% endfor %}
         </div>
 
         <div class="error-message" id="errorMessage"></div>
@@ -681,25 +702,13 @@
     <script>
         let currentChart = null;
 
-        async function fetchPages() {
-            try {
-                const response = await fetch('/api/pages');
-                const data = await response.json();
-                
-                const pagesList = document.getElementById('pagesList');
-                pagesList.innerHTML = '';
-
-                data.pages.forEach(page => {
-                    const pageCard = document.createElement('div');
-                    pageCard.className = 'page-card';
-                    pageCard.textContent = page.name;
-                    pageCard.onclick = () => loadPageMetrics(page.name);
-                    pagesList.appendChild(pageCard);
-                });
-            } catch (error) {
-                showError('Failed to load pages');
+        // Load initial page metrics if there are pages
+        window.onload = function() {
+            const pageCards = document.querySelectorAll('.page-card');
+            if (pageCards.length > 0) {
+                loadPageMetrics(pageCards[0].textContent.trim());
             }
-        }
+        };
 
         async function loadPageMetrics(pageName) {
             const loading = document.getElementById('loading');
@@ -709,7 +718,7 @@
             // Update active page card
             document.querySelectorAll('.page-card').forEach(card => {
                 card.classList.remove('active');
-                if (card.textContent === pageName) {
+                if (card.textContent.trim() === pageName) {
                     card.classList.add('active');
                 }
             });
@@ -804,12 +813,7 @@
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
         }
-
-        // Initialize the dashboard
-        fetchPages();
     </script>
-</body>
-</html>
       </footer>
     </div>
   </main>
