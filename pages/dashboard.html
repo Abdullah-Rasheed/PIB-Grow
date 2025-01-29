@@ -630,18 +630,8 @@
     </script>
 </head>
 <body>
-    <h1>Facebook Analytics Dashboard</h1>
 
-    <div class="user-info">
-        <div>
-            <h2>{{ partner['name'] }}</h2>
-            <p>{{ partner['email'] }}</p>
-            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
-        </div>
-      <button id="logout-button" onclick="window.location.href='/logout'">Logout</button>
-    </div>
-
-    <h3>Your Pages</h3>
+    <h3>Pages Performance</h3>
     <ul class="page-list">
         {% for page in partner['pages'] %}
         <li>
