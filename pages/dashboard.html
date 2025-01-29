@@ -303,11 +303,6 @@
               <ul class="list-group">
                 <!-- Pages will be dynamically populated -->
               </ul>
-              <div class="page-metrics mt-3" style="display: none;">
-                <p><strong>Reach:</strong> <span class="reach-value">Loading...</span></p>
-                <p><strong>Engagement:</strong> <span class="engagement-value">Loading...</span></p>
-                <p><strong>New Followers:</strong> <span class="followers-value">Loading...</span></p>
-              </div>
             </div>
           </div>
         </td>
@@ -536,97 +531,77 @@
         .card { transition: transform 0.3s ease-in-out; }
         .card:hover { transform: scale(1.05); }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/framer-motion/10.8.0/framer-motion.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gray-100 text-gray-800">
-    <div class="max-w-5xl mx-auto py-10 px-6">
-        <h1 class="text-3xl font-bold mb-6 text-center">Facebook Analytics Dashboard</h1>
-
-        <!-- User Details -->
-        <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold">{{ partner['name'] }}</h2>
-            <p class="text-gray-600">{{ partner['email'] }}</p>
-            <p class="text-blue-500 font-semibold">Total Engagement: {{ partner['total_engagement'] }}</p>
-            <button onclick="window.location.href='/logout'" class="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
-        </div>
-
-        <!-- List of Facebook Pages -->
-        <h3 class="text-2xl font-semibold mb-4">Your Pages</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {% for page in partner['pages'] %}
-            <div class="card bg-white shadow-lg rounded-lg p-4 cursor-pointer hover:shadow-xl" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
-                <h4 class="text-lg font-semibold">{{ page.name }}</h4>
-                <p class="text-gray-500">Engagement: {{ page.engagement }}</p>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Dynamic Page Metrics Section -->
-        <div id="metrics-container" class="mt-10 hidden">
-            <h3 id="page-title" class="text-2xl font-semibold text-center">Page Metrics</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div class="bg-white shadow-md rounded-lg p-6 text-center">
-                    <h4 class="text-lg font-semibold">Reach</h4>
-                    <p id="page-reach" class="text-3xl font-bold text-blue-600">-</p>
-                </div>
-                <div class="bg-white shadow-md rounded-lg p-6 text-center">
-                    <h4 class="text-lg font-semibold">Engagement</h4>
-                    <p id="page-engagement" class="text-3xl font-bold text-green-600">-</p>
-                </div>
-                <div class="bg-white shadow-md rounded-lg p-6 text-center">
-                    <h4 class="text-lg font-semibold">Followers</h4>
-                    <p id="page-followers" class="text-3xl font-bold text-purple-600">-</p>
-                </div>
-            </div>
-            <canvas id="chart" class="mt-6"></canvas>
-        </div>
+<body>
+    <div class="container">
+        <header>
+            <h1>Facebook Analytics Dashboard</h1>
+            <button id="logout">Logout</button>
+        </header>
+        <section class="user-info">
+            <h2 id="user-name">Loading...</h2>
+            <p id="user-email"></p>
+            <p>Total Engagement: <span id="total-engagement">0</span></p>
+        </section>
+        <section class="pages">
+            <h3>Your Pages</h3>
+            <div id="pages-list" class="grid"></div>
+        </section>
+        <section class="chart-section">
+            <canvas id="engagementChart"></canvas>
+        </section>
     </div>
-
     <script>
-        function loadPageMetrics(pageId, pageName) {
-            fetch(`/page/${pageId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert('Error loading data: ' + data.error);
-                        return;
-                    }
-
-                    document.getElementById('metrics-container').classList.remove('hidden');
-                    document.getElementById('page-title').innerText = pageName;
-                    document.getElementById('page-reach').innerText = data.reach;
-                    document.getElementById('page-engagement').innerText = data.engagement;
-                    document.getElementById('page-followers').innerText = data.followers;
-                    updateChart(data.reach, data.engagement, data.followers);
-                })
-                .catch(error => {
-                    alert('Failed to fetch data.');
-                    console.error(error);
+        async function fetchData() {
+            try {
+                let response = await fetch('/dashboard-data');
+                let data = await response.json();
+                document.getElementById('user-name').textContent = data.name;
+                document.getElementById('user-email').textContent = data.email;
+                document.getElementById('total-engagement').textContent = data.total_engagement;
+                
+                let pagesList = document.getElementById('pages-list');
+                pagesList.innerHTML = '';
+                
+                data.pages.forEach(page => {
+                    let pageDiv = document.createElement('div');
+                    pageDiv.classList.add('page-card');
+                    pageDiv.innerHTML = `
+                        <h4>${page.name}</h4>
+                        <p>Engagement: ${page.engagement}</p>
+                        <p>Followers: ${page.followers}</p>
+                    `;
+                    pageDiv.onclick = () => updateChart(page);
+                    pagesList.appendChild(pageDiv);
                 });
+                
+                if (data.pages.length > 0) updateChart(data.pages[0]);
+            } catch (error) {
+                console.error("Failed to fetch data", error);
+            }
         }
 
-        function updateChart(reach, engagement, followers) {
-            const ctx = document.getElementById('chart').getContext('2d');
-            if (window.myChart) window.myChart.destroy();
-            window.myChart = new Chart(ctx, {
+        function updateChart(page) {
+            let ctx = document.getElementById('engagementChart').getContext('2d');
+            new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ['Reach', 'Engagement', 'Followers'],
                     datasets: [{
-                        label: 'Page Performance',
-                        data: [reach, engagement, followers],
-                        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6'],
-                        borderRadius: 10,
+                        label: page.name,
+                        data: [page.reach, page.engagement, page.followers],
+                        backgroundColor: ['blue', 'green', 'orange']
                     }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
                 }
             });
         }
+
+        document.getElementById('logout').onclick = () => window.location.href = '/logout';
+        fetchData();
     </script>
 </body>
 
