@@ -203,6 +203,8 @@ def fetch_page_metrics(page_name):
         if 'access_token' not in session:
             return jsonify({"error": "User not authenticated"}), 401
 
+        decoded_page_name = urllib.parse.unquote(page_name)
+
         # Fetch pages from Facebook API
         pages_response = requests.get(
             "https://graph.facebook.com/v22.0/me/accounts",
@@ -216,12 +218,14 @@ def fetch_page_metrics(page_name):
 
         # Find the requested page
         page_info = next(
-            (page for page in pages_data if page['name'].lower() == page_name.lower()),
+            (page for page in pages_data if page['name'].lower() == decoded_page_name.lower()),
             None
         )
 
         if not page_info:
-            return jsonify({"error": f"Page '{page_name}' not found"}), 404
+            print(f"🔍 Requested page: '{decoded_page_name}'")
+            print(f"📋 Available pages: {[page['name'] for page in pages_data]}")
+            return jsonify({"error": f"Page '{decoded_page_name}' not found"}), 404
 
         page_id = page_info['id']
         page_token = page_info['access_token']
@@ -236,16 +240,17 @@ def fetch_page_metrics(page_name):
             }
         )
         insights_json = insights_response.json()
-        print("🔍 Insights API Response:", insights_json)  # **LOG THE RESPONSE**
 
-        # If response has error, return it
         if "error" in insights_json:
             return jsonify({"error": insights_json["error"]["message"]}), 400
 
         insights_data = insights_json.get('data', [])
 
         def get_metric_value(name):
-            return next((metric['values'][0]['value'] for metric in insights_data if metric['name'] == name), 0)
+            metric = next((m for m in insights_data if m['name'] == name), None)
+            if metric and metric.get('values'):
+                return metric['values'][0].get('value', 0)
+            return 0
 
         page_metrics = {
             "reach": get_metric_value("page_impressions"),
@@ -258,6 +263,9 @@ def fetch_page_metrics(page_name):
     except requests.exceptions.RequestException as e:
         print(f"🚨 API request error: {str(e)}")
         return jsonify({"error": "Failed to fetch data from Facebook"}), 500
+    except Exception as e:
+        print(f"🚨 Unexpected error: {str(e)}")
+        return
 
 
 
