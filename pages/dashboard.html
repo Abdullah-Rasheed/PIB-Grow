@@ -545,25 +545,205 @@
             display: none;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #1877f2;
+            --secondary: #42b72a;
+            --bg: #f0f2f5;
+            --text: #1c1e21;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        .partner-info {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .partner-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .partner-email {
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        .pages-list {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .page-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .page-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .page-card.active {
+            border: 2px solid var(--primary);
+        }
+
+        .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .metrics-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric-title {
+            color: var(--text);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: var(--text);
+        }
+
+        .error-message {
+            display: none;
+            color: #dc3545;
+            background: #ffe6e6;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .performance-chart {
+            margin-top: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logout-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #166fe5;
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard">
+    <div class="container">
         <div class="header">
-            <h1>Facebook Pages Dashboard</h1>
-            <p>Select a page to view its performance metrics</p>
+            <h1>Facebook Analytics Dashboard</h1>
+            <p>View and analyze your Facebook page performance</p>
+        </div>
+
+        <div class="partner-info">
+            <div class="partner-name">{{ partner.name }}</div>
+            <div class="partner-email">{{ partner.email }}</div>
+            <div>Total Engagement: {{ partner.total_engagement }}</div>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
         </div>
 
         <div class="pages-list" id="pagesList">
             {% for page in partner.pages %}
-            <div class="page-card" onclick="loadPageMetrics('{{ page.name }}')">
-                {{ page.name }}
+            <div class="page-card" data-page-name="{{ page.name }}">
+                <div class="page-name">{{ page.name }}</div>
+                <div class="page-engagement">Engagement: {{ page.engagement }}</div>
+                <div class="page-status">Status: {{ page.status }}</div>
             </div>
             {% endfor %}
         </div>
 
         <div class="error-message" id="errorMessage"></div>
         <div class="loading" id="loading">Loading metrics...</div>
-        <div class="debug-info" id="debugInfo"></div>
 
         <div class="metrics-container" id="metricsContainer">
             <div class="metric-card">
@@ -583,65 +763,51 @@
         <div class="chart-container">
             <canvas id="metricsChart"></canvas>
         </div>
+
+        <div class="performance-chart">
+            <canvas id="performanceChart"></canvas>
+        </div>
     </div>
 
     <script>
-        let currentChart = null;
-        const DEBUG = true; // Set to false in production
+        let currentMetricsChart = null;
+        let performanceChart = null;
 
-        // Load initial page metrics if there are pages
-        window.onload = function() {
-            const pageCards = document.querySelectorAll('.page-card');
-            if (pageCards.length > 0) {
-                loadPageMetrics(pageCards[0].textContent.trim());
+        // Initialize page functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up page card click handlers
+            document.querySelectorAll('.page-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const pageName = this.dataset.pageName;
+                    document.querySelectorAll('.page-card').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    loadPageMetrics(pageName);
+                });
+            });
+
+            // Load initial page metrics
+            const firstPage = document.querySelector('.page-card');
+            if (firstPage) {
+                firstPage.classList.add('active');
+                loadPageMetrics(firstPage.dataset.pageName);
             }
-        };
+
+            // Initialize performance chart
+            initializePerformanceChart();
+        });
 
         async function loadPageMetrics(pageName) {
             const loading = document.getElementById('loading');
             const metricsContainer = document.getElementById('metricsContainer');
             const errorMessage = document.getElementById('errorMessage');
-            const debugInfo = document.getElementById('debugInfo');
-
-            // Update active page card
-            document.querySelectorAll('.page-card').forEach(card => {
-                card.classList.remove('active');
-                if (card.textContent.trim() === pageName) {
-                    card.classList.add('active');
-                }
-            });
 
             loading.style.display = 'block';
             metricsContainer.classList.remove('visible');
             errorMessage.style.display = 'none';
-            debugInfo.style.display = 'none';
 
             try {
-                const response = await fetch(`/api/fetch_page_metrics/${encodeURIComponent(pageName)}`, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                // Log the raw response for debugging
-                if (DEBUG) {
-                    const clonedResponse = response.clone();
-                    const rawText = await clonedResponse.text();
-                    debugInfo.textContent = `Status: ${response.status}\nHeaders: ${JSON.stringify(Object.fromEntries(response.headers), null, 2)}\nResponse:\n${rawText}`;
-                    debugInfo.style.display = 'block';
-                }
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                // Try to parse the response as JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Response was not JSON');
-                }
-
+                const response = await fetch(`/api/fetch_page_metrics/${encodeURIComponent(pageName)}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -649,11 +815,10 @@
                 }
 
                 updateMetrics(data.page_metrics);
-                updateChart(data.page_metrics);
+                updateMetricsChart(data.page_metrics);
                 
                 metricsContainer.classList.add('visible');
             } catch (error) {
-                console.error('Error:', error);
                 showError(`Error loading metrics: ${error.message}`);
             } finally {
                 loading.style.display = 'none';
@@ -666,13 +831,13 @@
             document.getElementById('followersValue').textContent = formatNumber(metrics.followers);
         }
 
-        function updateChart(metrics) {
-            if (currentChart) {
-                currentChart.destroy();
+        function updateMetricsChart(metrics) {
+            if (currentMetricsChart) {
+                currentMetricsChart.destroy();
             }
 
             const ctx = document.getElementById('metricsChart').getContext('2d');
-            currentChart = new Chart(ctx, {
+            currentMetricsChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ['Reach', 'Engagement', 'Followers'],
@@ -697,10 +862,41 @@
                     animations: {
                         tension: {
                             duration: 1000,
-                            easing: 'linear',
-                            from: 1,
-                            to: 0,
-                            loop: true
+                            easing: 'linear'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializePerformanceChart() {
+            const performanceData = {{ performance|tojson }};
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: performanceData.labels,
+                    datasets: [{
+                        label: 'Daily Engagement',
+                        data: performanceData.data,
+                        borderColor: 'rgb(24, 119, 242)',
+                        backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Page Performance Over Time'
                         }
                     },
                     scales: {
@@ -728,6 +924,7 @@
             errorMessage.style.display = 'block';
         }
     </script>
+
       </footer>
     </div>
   </main>
