@@ -522,22 +522,34 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-  <style>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Analytics</title>
+    <style>
         body {
             font-family: sans-serif;
             margin: 20px;
-            background-color: #f4f4f4; /* Light background */
-            color: #333; /* Dark text for contrast */
+            background-color: #f4f4f4;
+            color: #333;
         }
         h1, h2, h3 {
-            color: #007bff; /* Blue headings */
+            color: #007bff;
         }
         .user-info {
-            background-color: #e9ecef; /* Light gray background for user info */
+            background-color: #e9ecef;
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
+            display: flex; /* Use flexbox for layout */
+            align-items: center; /* Vertically align items */
+            justify-content: space-between; /* Distribute space between items */
         }
+
+        .user-info > div { /* Group name/email */
+            flex: 1; /* Allow them to grow equally */
+        }
+
         .page-list {
             list-style: none;
             padding: 0;
@@ -548,31 +560,44 @@
         .page-link {
             display: inline-block;
             padding: 8px 16px;
-            background-color: #007bff; /* Blue button */
+            background-color: #007bff;
             color: white;
             text-decoration: none;
             border-radius: 5px;
-            transition: background-color 0.3s ease; /* Smooth transition on hover */
-            cursor: pointer; /* Indicate it's clickable */
+            transition: background-color 0.3s ease;
+            cursor: pointer;
         }
         .page-link:hover {
-            background-color: #0056b3; /* Darker blue on hover */
+            background-color: #0056b3;
         }
         .metrics {
             margin-top: 20px;
-            border: 1px solid #ddd; /* Light border */
+            border: 1px solid #ddd;
             padding: 20px;
             border-radius: 5px;
         }
         .metric {
             margin-bottom: 10px;
+            display: flex; /* Use flexbox for alignment */
+            align-items: center; /* Vertically center */
         }
         .metric-label {
             font-weight: bold;
-            display: inline-block; /* Makes label and value on the same line */
-            width: 100px; /* Adjust width for alignment */
+            width: 100px;
         }
 
+        #logout-button {
+          background-color: #dc3545;
+          color: white;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        }
+        #logout-button:hover {
+          background-color: #c12a36;
+        }
 
     </style>
     <script>
@@ -596,32 +621,45 @@
                 });
         }
     </script>
+</head>
+<body>
+    <h1>Facebook Analytics Dashboard</h1>
 
+    <div class="user-info">
+        <div>
+            <h2>{{ partner['name'] }}</h2>
+            <p>{{ partner['email'] }}</p>
+            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
+        </div>
+      <button id="logout-button" onclick="window.location.href='/logout'">Logout</button>
+    </div>
 
-        <h3>Facebook Pages</h3>
-        <ul class="page-list">
-            {% for page in partner['pages'] %}
-            <li>
-                <a class="page-link" href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
-                    {{ page.name }}
-                </a> (Engagement: {{ page.engagement }})
-            </li>
-            {% endfor %}
-        </ul>
+    <h3>Your Pages</h3>
+    <ul class="page-list">
+        {% for page in partner['pages'] %}
+        <li>
+            <a class="page-link" href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
+                {{ page.name }}
+            </a> (Engagement: {{ page.engagement }})
+        </li>
+        {% endfor %}
+    </ul>
 
-        <div class="metrics">
-            <h3 id="page-title">Select a page to view metrics</h3>
-            <div class="metric">
-                <span class="metric-label">Reach:</span> <span id="page-reach">-</span>
-            </div>
-            <div class="metric">
-                <span class="metric-label">Engagement:</span> <span id="page-engagement">-</span>
-            </div>
-            <div class="metric">
-                <span class="metric-label">Followers:</span> <span id="page-followers">-</span>
-            </div>
+    <div class="metrics">
+        <h3 id="page-title">Select a page to view metrics</h3>
+        <div class="metric">
+            <span class="metric-label">Reach: 📈</span> <span id="page-reach">-</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Engagement: ❤️</span> <span id="page-engagement">-</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Followers: 👥</span> <span id="page-followers">-</span>
         </div>
     </div>
+
+</body>
+</html>
       </footer>
     </div>
   </main>
