@@ -522,64 +522,82 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
- <style>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Analytics Dashboard</title>
+    <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-            text-align: center;
-        }
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4; /* Light background */
+            color: #333; /* Dark text for contrast */
         }
         h1, h2, h3 {
-            color: #333;
+            color: #007bff; /* Blue headings */
         }
-        .button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            cursor: pointer;
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        }
+        .user-info {
+            background-color: #e9ecef; /* Light gray background for user info */
+            padding: 15px;
+            margin-bottom: 20px;
             border-radius: 5px;
-            margin-top: 10px;
-        }
-        .button:hover {
-            background-color: #0056b3;
         }
         .page-list {
             list-style: none;
             padding: 0;
         }
         .page-list li {
-            background: #fff;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.3s;
+            margin-bottom: 10px;
         }
-        .page-list li:hover {
-            background: #eaeaea;
+        .page-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #007bff; /* Blue button */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease; /* Smooth transition on hover */
+            cursor: pointer; /* Indicate it's clickable */
+        }
+        .page-link:hover {
+            background-color: #0056b3; /* Darker blue on hover */
         }
         .metrics {
-            display: none;
-            padding: 15px;
-            margin-top: 10px;
-            background: #fff;
+            margin-top: 20px;
+            border: 1px solid #ddd; /* Light border */
+            padding: 20px;
             border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        .error {
-            color: red;
+        .metric {
+            margin-bottom: 10px;
+        }
+        .metric-label {
             font-weight: bold;
+            display: inline-block; /* Makes label and value on the same line */
+            width: 100px; /* Adjust width for alignment */
         }
+        #logout-button {
+          background-color: #dc3545; /* Red button */
+          color: white;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        }
+        #logout-button:hover {
+          background-color: #c12a36; /* Darker red on hover */
+        }
+
     </style>
     <script>
         function loadPageMetrics(pageId, pageName) {
@@ -587,18 +605,17 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        document.getElementById('error-message').innerText = 'Error: ' + data.error;
+                        alert('Error loading data: ' + data.error);
                         return;
                     }
-                    document.getElementById('error-message').innerText = '';
+
                     document.getElementById('page-title').innerText = pageName;
-                    document.getElementById('page-reach').innerHTML = `<i class='fas fa-chart-line'></i> Reach: ${data.reach}`;
-                    document.getElementById('page-engagement').innerHTML = `<i class='fas fa-heart'></i> Engagement: ${data.engagement}`;
-                    document.getElementById('page-followers').innerHTML = `<i class='fas fa-user-friends'></i> Followers: ${data.followers}`;
-                    document.getElementById('metrics-container').style.display = 'block';
+                    document.getElementById('page-reach').innerText = data.reach;
+                    document.getElementById('page-engagement').innerText = data.engagement;
+                    document.getElementById('page-followers').innerText = data.followers;
                 })
                 .catch(error => {
-                    document.getElementById('error-message').innerText = 'Failed to fetch data.';
+                    alert('Failed to fetch data.');
                     console.error(error);
                 });
         }
@@ -606,35 +623,41 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 Facebook Analytics Dashboard</h1>
-        <p>View and analyze your Facebook page performance</p>
+        <h1>Facebook Analytics Dashboard</h1>
 
-        <div>
+        <div class="user-info">
             <h2>{{ partner['name'] }}</h2>
             <p>{{ partner['email'] }}</p>
-            <p>Total Engagement: <strong>{{ partner['total_engagement'] }}</strong></p>
-            <button class="button" onclick="window.location.href='/logout'">Logout</button>
+            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
+            <button id="logout-button" onclick="window.location.href='/logout'">Logout</button>
         </div>
 
         <h3>Your Pages</h3>
         <ul class="page-list">
             {% for page in partner['pages'] %}
-            <li onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
-                <strong>{{ page.name }}</strong> <br>
-                Engagement: {{ page.engagement }}
+            <li>
+                <a class="page-link" href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
+                    {{ page.name }}
+                </a> (Engagement: {{ page.engagement }})
             </li>
             {% endfor %}
         </ul>
 
-        <div class="error" id="error-message"></div>
-
-        <div id="metrics-container" class="metrics">
+        <div class="metrics">
             <h3 id="page-title">Select a page to view metrics</h3>
-            <p id="page-reach"><i class='fas fa-chart-line'></i> Reach: -</p>
-            <p id="page-engagement"><i class='fas fa-heart'></i> Engagement: -</p>
-            <p id="page-followers"><i class='fas fa-user-friends'></i> Followers: -</p>
+            <div class="metric">
+                <span class="metric-label">Reach:</span> <span id="page-reach">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Engagement:</span> <span id="page-engagement">-</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Followers:</span> <span id="page-followers">-</span>
+            </div>
         </div>
     </div>
+</body>
+</html>
       </footer>
     </div>
   </main>
