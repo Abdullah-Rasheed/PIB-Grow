@@ -214,6 +214,7 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+        
 @app.route('/page/<page_id>')
 @login_required
 def get_page_data(page_id):
