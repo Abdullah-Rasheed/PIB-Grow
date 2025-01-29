@@ -523,9 +523,6 @@
           });
         </script>         
 
-  <!DOCTYPE html>
-<html lang="en">
-<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facebook Analytics Dashboard</title>
@@ -544,13 +541,15 @@
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; /* Use flexbox for layout */
+            align-items: center; /* Vertically align items */
+            justify-content: space-between; /* Distribute space between items */
         }
-        .user-info > div {
-            flex: 1;
+
+        .user-info > div { /* Group name/email */
+            flex: 1; /* Allow them to grow equally */
         }
+
         .page-list {
             list-style: none;
             padding: 0;
@@ -576,26 +575,17 @@
             border: 1px solid #ddd;
             padding: 20px;
             border-radius: 5px;
-            display: grid; /* Use grid for layout */
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive columns */
-            gap: 20px; /* Spacing between grid items */
         }
         .metric {
-            background-color: white; /* Card-like background */
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
-            text-align: center; /* Center the content */
+            margin-bottom: 10px;
+            display: flex; /* Use flexbox for alignment */
+            align-items: center; /* Vertically center */
         }
-
         .metric-label {
             font-weight: bold;
-            display: block; /* Label on its own line */
-            margin-bottom: 5px;
+            width: 100px;
         }
-        .metric-value {
-            font-size: 1.2em; /* Larger value */
-        }
+
         #logout-button {
           background-color: #dc3545;
           color: white;
@@ -631,20 +621,7 @@
                 });
         }
     </script>
-</head>
-<body>
-    <h1>Facebook Analytics Dashboard</h1>
-
-    <div class="user-info">
-        <div>
-            <h2>{{ partner['name'] }}</h2>
-            <p>{{ partner['email'] }}</p>
-            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
-        </div>
-      <button id="logout-button" onclick="window.location.href='/logout'">Logout</button>
-    </div>
-
-    <h3>Your Pages</h3>
+    <h3>Pages Performance</h3>
     <ul class="page-list">
         {% for page in partner['pages'] %}
         <li>
@@ -658,18 +635,15 @@
     <div class="metrics">
         <h3 id="page-title">Select a page to view metrics</h3>
         <div class="metric">
-            <span class="metric-label">Reach 📈</span> <span class="metric-value" id="page-reach">-</span>
+            <span class="metric-label">Reach: 📈</span> <span id="page-reach">-</span>
         </div>
         <div class="metric">
-            <span class="metric-label">Engagement ❤️</span> <span class="metric-value" id="page-engagement">-</span>
+            <span class="metric-label">Engagement: ❤️</span> <span id="page-engagement">-</span>
         </div>
         <div class="metric">
-            <span class="metric-label">Followers 👥</span> <span class="metric-value" id="page-followers">-</span>
+            <span class="metric-label">Followers: 👥</span> <span id="page-followers">-</span>
         </div>
     </div>
-
-</body>
-</html>
       </footer>
     </div>
   </main>
