@@ -214,6 +214,48 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+@app.route('/page/<page_id>')
+@login_required
+def get_page_data(page_id):
+    page_tokens = session.get('page_tokens', {})
+    page_token = page_tokens.get(page_id)
+
+    if not page_token:
+        return jsonify({'error': 'Page token not found'}), 403
+
+    try:
+        # Fetch insights for selected page
+        insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
+        insights_params = {
+            "metric": "page_impressions,page_post_engagements,page_fans",
+            "period": "day",
+            "access_token": page_token
+        }
+        insights_response = requests.get(insights_url, params=insights_params)
+
+        if insights_response.status_code != 200:
+            return jsonify({'error': 'Failed to fetch data'}), insights_response.status_code
+
+        insights_data = insights_response.json().get('data', [])
+
+        # Helper function to extract values
+        def get_metric_value(name):
+            metric = next((m for m in insights_data if m['name'] == name), None)
+            if metric and metric.get('values'):
+                return metric['values'][0].get('value', 0)
+            return 0
+
+        page_metrics = {
+            "reach": get_metric_value("page_impressions"),
+            "engagement": get_metric_value("page_post_engagements"),
+            "followers": get_metric_value("page_fans")
+        }
+
+        return jsonify(page_metrics)
+
+    except requests.exceptions.RequestException as e:
+        print("Error fetching page metrics:", e)
+        return jsonify({'error': 'Server error'}), 500
 
 
 @app.route('/assets/<path:filename>')
