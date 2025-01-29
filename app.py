@@ -84,6 +84,76 @@ def facebook_callback():
     except requests.exceptions.RequestException as e:
         print("Error during token exchange:", e)
         return "An error occurred during authentication.", 500
+@app.route('/api/fetch_page_metrics/<page_name>')
+@login_required
+def fetch_page_metrics(page_name):
+    try:
+        if 'access_token' not in session:
+            return jsonify({"error": "User not authenticated"}), 401
+
+        decoded_page_name = urllib.parse.unquote(page_name)
+
+        # Fetch pages from Facebook API
+        pages_response = requests.get(
+            "https://graph.facebook.com/v22.0/me/accounts",
+            params={
+                "fields": "name,id,access_token",
+                "access_token": session['access_token']
+            }
+        )
+        pages_response.raise_for_status()
+        pages_data = pages_response.json().get('data', [])
+
+        # Find the requested page
+        page_info = next(
+            (page for page in pages_data if page['name'].lower() == decoded_page_name.lower()),
+            None
+        )
+
+        if not page_info:
+            print(f"🔍 Requested page: '{decoded_page_name}'")
+            print(f"📋 Available pages: {[page['name'] for page in pages_data]}")
+            return jsonify({"error": f"Page '{decoded_page_name}' not found"}), 404
+
+        page_id = page_info['id']
+        page_token = page_info['access_token']
+
+        # Fetch insights
+        insights_response = requests.get(
+            f"https://graph.facebook.com/v22.0/{page_id}/insights",
+            params={
+                "metric": "page_impressions,page_post_engagements,page_fans",
+                "period": "day",
+                "access_token": page_token
+            }
+        )
+        insights_json = insights_response.json()
+
+        if "error" in insights_json:
+            return jsonify({"error": insights_json["error"]["message"]}), 400
+
+        insights_data = insights_json.get('data', [])
+
+        def get_metric_value(name):
+            metric = next((m for m in insights_data if m['name'] == name), None)
+            if metric and metric.get('values'):
+                return metric['values'][0].get('value', 0)
+            return 0
+
+        page_metrics = {
+            "reach": get_metric_value("page_impressions"),
+            "engagement": get_metric_value("page_post_engagements"),
+            "followers": get_metric_value("page_fans")
+        }
+
+        return jsonify({"page_metrics": page_metrics})
+
+    except requests.exceptions.RequestException as e:
+        print(f"🚨 API request error: {str(e)}")
+        return jsonify({"error": "Failed to fetch data from Facebook"}), 500
+    except Exception as e:
+        print(f"🚨 Unexpected error: {str(e)}")
+        return
 
 @app.route('/dashboard')
 @login_required
@@ -195,77 +265,6 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
-
-@app.route('/api/fetch_page_metrics/<page_name>')
-@login_required
-def fetch_page_metrics(page_name):
-    try:
-        if 'access_token' not in session:
-            return jsonify({"error": "User not authenticated"}), 401
-
-        decoded_page_name = urllib.parse.unquote(page_name)
-
-        # Fetch pages from Facebook API
-        pages_response = requests.get(
-            "https://graph.facebook.com/v22.0/me/accounts",
-            params={
-                "fields": "name,id,access_token",
-                "access_token": session['access_token']
-            }
-        )
-        pages_response.raise_for_status()
-        pages_data = pages_response.json().get('data', [])
-
-        # Find the requested page
-        page_info = next(
-            (page for page in pages_data if page['name'].lower() == decoded_page_name.lower()),
-            None
-        )
-
-        if not page_info:
-            print(f"🔍 Requested page: '{decoded_page_name}'")
-            print(f"📋 Available pages: {[page['name'] for page in pages_data]}")
-            return jsonify({"error": f"Page '{decoded_page_name}' not found"}), 404
-
-        page_id = page_info['id']
-        page_token = page_info['access_token']
-
-        # Fetch insights
-        insights_response = requests.get(
-            f"https://graph.facebook.com/v22.0/{page_id}/insights",
-            params={
-                "metric": "page_impressions,page_post_engagements,page_fans",
-                "period": "day",
-                "access_token": page_token
-            }
-        )
-        insights_json = insights_response.json()
-
-        if "error" in insights_json:
-            return jsonify({"error": insights_json["error"]["message"]}), 400
-
-        insights_data = insights_json.get('data', [])
-
-        def get_metric_value(name):
-            metric = next((m for m in insights_data if m['name'] == name), None)
-            if metric and metric.get('values'):
-                return metric['values'][0].get('value', 0)
-            return 0
-
-        page_metrics = {
-            "reach": get_metric_value("page_impressions"),
-            "engagement": get_metric_value("page_post_engagements"),
-            "followers": get_metric_value("page_fans")
-        }
-
-        return jsonify({"page_metrics": page_metrics})
-
-    except requests.exceptions.RequestException as e:
-        print(f"🚨 API request error: {str(e)}")
-        return jsonify({"error": "Failed to fetch data from Facebook"}), 500
-    except Exception as e:
-        print(f"🚨 Unexpected error: {str(e)}")
-        return
 
 
 
