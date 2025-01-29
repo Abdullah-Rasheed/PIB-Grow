@@ -522,6 +522,59 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
+  <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4; /* Light background */
+            color: #333; /* Dark text for contrast */
+        }
+        h1, h2, h3 {
+            color: #007bff; /* Blue headings */
+        }
+        .user-info {
+            background-color: #e9ecef; /* Light gray background for user info */
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .page-list {
+            list-style: none;
+            padding: 0;
+        }
+        .page-list li {
+            margin-bottom: 10px;
+        }
+        .page-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #007bff; /* Blue button */
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease; /* Smooth transition on hover */
+            cursor: pointer; /* Indicate it's clickable */
+        }
+        .page-link:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+        .metrics {
+            margin-top: 20px;
+            border: 1px solid #ddd; /* Light border */
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .metric {
+            margin-bottom: 10px;
+        }
+        .metric-label {
+            font-weight: bold;
+            display: inline-block; /* Makes label and value on the same line */
+            width: 100px; /* Adjust width for alignment */
+        }
+
+
+    </style>
     <script>
         function loadPageMetrics(pageId, pageName) {
             fetch(`/page/${pageId}`)
@@ -544,7 +597,8 @@
         }
     </script>
 
-        <h3>Facebook Pages Overview</h3>
+
+        <h3>Facebook Pages</h3>
         <ul class="page-list">
             {% for page in partner['pages'] %}
             <li>
@@ -568,7 +622,6 @@
             </div>
         </div>
     </div>
-
       </footer>
     </div>
   </main>
