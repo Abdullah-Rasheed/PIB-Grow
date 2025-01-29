@@ -522,7 +522,8 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-  <meta charset="UTF-8">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facebook Analytics Dashboard</title>
     <style>
@@ -536,101 +537,64 @@
             text-align: center;
         }
 
-        /* Dashboard Container */
         .dashboard {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
-        }
-
-        /* User Info */
-        .user-info {
-            background: #fff;
-            padding: 15px;
+            background: white;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
 
-        .user-info button {
-            background: #1877f2;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-
-        .user-info button:hover {
-            background: #155ab6;
-        }
-
-        /* Page List */
-        .page-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .page-list li {
-            background: white;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: 0.3s;
-        }
-
-        .page-list li:hover {
-            background: #eef3ff;
-        }
-
-        .page-list a {
-            text-decoration: none;
-            font-weight: bold;
+        h1 {
             color: #1877f2;
-            cursor: pointer;
         }
 
-        /* Metrics Container */
         .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
             margin-top: 20px;
-        }
-
-        .metrics {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
         }
 
         .metric-box {
             background: white;
-            flex: 1;
-            padding: 15px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: 0.3s;
+            text-align: left;
         }
 
-        .metric-box:hover {
-            transform: translateY(-5px);
-        }
-
-        .metric-box h4 {
-            margin: 0;
-            color: #333;
+        .metric-box h3 {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 5px;
         }
 
         .metric-box p {
             font-size: 24px;
             font-weight: bold;
-            margin: 10px 0 0;
+            margin: 0;
+        }
+
+        .sub-metrics {
+            font-size: 14px;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        .positive {
+            color: green;
+        }
+
+        .negative {
+            color: red;
         }
 
         /* Responsive Design */
         @media (max-width: 600px) {
-            .metrics {
-                flex-direction: column;
+            .metrics-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -646,9 +610,20 @@
                     }
 
                     document.getElementById('page-title').innerText = pageName;
-                    document.getElementById('page-reach').innerText = data.reach;
-                    document.getElementById('page-engagement').innerText = data.engagement;
-                    document.getElementById('page-followers').innerText = data.followers;
+                    document.getElementById('views').innerText = data.views;
+                    document.getElementById('views-change').innerText = data.views_change + "%";
+                    document.getElementById('views-change').className = data.views_change < 0 ? "negative" : "positive";
+
+                    document.getElementById('reach').innerText = data.reach;
+                    document.getElementById('reach-change').innerText = data.reach_change + "%";
+                    document.getElementById('reach-change').className = data.reach_change < 0 ? "negative" : "positive";
+
+                    document.getElementById('follows').innerText = data.follows;
+                    document.getElementById('follows-change').innerText = data.follows_change + "%";
+                    document.getElementById('follows-change').className = data.follows_change < 0 ? "negative" : "positive";
+
+                    document.getElementById('unfollows').innerText = data.unfollows;
+                    document.getElementById('net-follows').innerText = data.net_follows;
                 })
                 .catch(error => {
                     alert('Failed to fetch data.');
@@ -662,48 +637,56 @@
         <h1>Facebook Analytics Dashboard</h1>
         <p>View and analyze your Facebook page performance</p>
 
-        <!-- User Details -->
-        <div class="user-info">
-            <h2>{{ partner['name'] }}</h2>
-            <p>{{ partner['email'] }}</p>
-            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
-            <button onclick="window.location.href='/logout'">Logout</button>
-        </div>
-
         <!-- List of Facebook Pages -->
-        <h3>Your Pages</h3>
-        <ul class="page-list">
+        <h3>Select a Page</h3>
+        <ul>
             {% for page in partner['pages'] %}
             <li>
                 <a href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
                     {{ page.name }}
-                </a> (Engagement: {{ page.engagement }})
+                </a>
             </li>
             {% endfor %}
         </ul>
 
-        <!-- Dynamic Page Metrics -->
+        <!-- Metrics Display -->
+        <h3 id="page-title">Select a page to view metrics</h3>
         <div class="metrics-container">
-            <h3 id="page-title">Select a page to view metrics</h3>
-            <div class="metrics">
-                <div class="metric-box">
-                    <h4>Reach</h4>
-                    <p id="page-reach">-</p>
-                </div>
-                <div class="metric-box">
-                    <h4>Engagement</h4>
-                    <p id="page-engagement">-</p>
-                </div>
-                <div class="metric-box">
-                    <h4>Followers</h4>
-                    <p id="page-followers">-</p>
-                </div>
+            <!-- Views -->
+            <div class="metric-box">
+                <h3>Views</h3>
+                <p id="views">-</p>
+                <div class="sub-metrics">Change: <span id="views-change">-</span></div>
+            </div>
+
+            <!-- Reach -->
+            <div class="metric-box">
+                <h3>Reach</h3>
+                <p id="reach">-</p>
+                <div class="sub-metrics">Change: <span id="reach-change">-</span></div>
+            </div>
+
+            <!-- Follows -->
+            <div class="metric-box">
+                <h3>Follows</h3>
+                <p id="follows">-</p>
+                <div class="sub-metrics">Change: <span id="follows-change">-</span></div>
+            </div>
+
+            <!-- Unfollows -->
+            <div class="metric-box">
+                <h3>Unfollows</h3>
+                <p id="unfollows">-</p>
+            </div>
+
+            <!-- Net Follows -->
+            <div class="metric-box">
+                <h3>Net Follows</h3>
+                <p id="net-follows">-</p>
             </div>
         </div>
     </div>
 </body>
-
-
       </footer>
     </div>
   </main>
