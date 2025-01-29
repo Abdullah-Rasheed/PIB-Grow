@@ -525,10 +525,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics</title>
+    <title>Facebook Analytics Dashboard</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #007bff;
+        }
+        .user-info {
+            background-color: #e9ecef;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .user-info > div {
+            flex: 1;
+        }
+        .page-list {
+            list-style: none;
+            padding: 0;
+        }
+        .page-list li {
+            margin-bottom: 10px;
+        }
+        .page-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+        .page-link:hover {
+            background-color: #0056b3;
+        }
+        .metrics {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            display: grid; /* Use grid for layout */
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive columns */
+            gap: 20px; /* Spacing between grid items */
+        }
+        .metric {
+            background-color: white; /* Card-like background */
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            text-align: center; /* Center the content */
+        }
+
+        .metric-label {
+            font-weight: bold;
+            display: block; /* Label on its own line */
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 1.2em; /* Larger value */
+        }
+        #logout-button {
+          background-color: #dc3545;
+          color: white;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        }
+        #logout-button:hover {
+          background-color: #c12a36;
+        }
+
+    </style>
     <script>
         function loadPageMetrics(pageId, pageName) {
-            fetch(/page/${pageId})
+            fetch(`/page/${pageId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
@@ -537,9 +618,9 @@
                     }
 
                     document.getElementById('page-title').innerText = pageName;
-                    document.getElementById('page-reach').innerText = "Reach: " + data.reach;
-                    document.getElementById('page-engagement').innerText = "Engagement: " + data.engagement;
-                    document.getElementById('page-followers').innerText = "Followers: " + data.followers;
+                    document.getElementById('page-reach').innerText = data.reach;
+                    document.getElementById('page-engagement').innerText = data.engagement;
+                    document.getElementById('page-followers').innerText = data.followers;
                 })
                 .catch(error => {
                     alert('Failed to fetch data.');
@@ -550,33 +631,32 @@
 </head>
 <body>
     <h1>Facebook Analytics</h1>
-    <p>View and analyze your Facebook page performance</p>
 
-    <!-- User Details -->
-    <div>
-        <h2>{{ partner['name'] }}</h2>
-        <p>{{ partner['email'] }}</p>
-        <p>Total Engagement: {{ partner['total_engagement'] }}</p>
-        <button onclick="window.location.href='/logout'">Logout</button>
-    </div>
 
-    <!-- List of Facebook Pages -->
-    <h3>Your Pages</h3>
-    <ul>
+    <h3>Pages</h3>
+    <ul class="page-list">
         {% for page in partner['pages'] %}
         <li>
-            <a href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
+            <a class="page-link" href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
                 {{ page.name }}
             </a> (Engagement: {{ page.engagement }})
         </li>
         {% endfor %}
     </ul>
 
-    <!-- Dynamic Page Metrics Section -->
-    <h3 id="page-title">Select a page to view metrics</h3>
-    <p id="page-reach">Reach: -</p>
-    <p id="page-engagement">Engagement: -</p>
-    <p id="page-followers">Followers: -</p>
+    <div class="metrics">
+        <h3 id="page-title">Select a page to view metrics</h3>
+        <div class="metric">
+            <span class="metric-label">Reach 📈</span> <span class="metric-value" id="page-reach">-</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Engagement ❤️</span> <span class="metric-value" id="page-engagement">-</span>
+        </div>
+        <div class="metric">
+            <span class="metric-label">Followers 👥</span> <span class="metric-value" id="page-followers">-</span>
+        </div>
+    </div>
+
 </body>
       </footer>
     </div>
