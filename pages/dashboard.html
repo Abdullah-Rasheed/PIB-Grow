@@ -718,133 +718,42 @@
         }
     </style>
 
-    <meta charset="UTF-6">
-    <title>Facebook Performance Metrics</title>
+ <meta charset="UTF-8">
+    <title>Facebook Metrics Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <!-- Previous styles remain the same -->
     <style>
-        :root {
-            --primary: #1877f2;
-            --secondary: #42b72a;
-            --bg: #f0f2f5;
-            --text: #1c1e21;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-
-        .dashboard {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-
-        .pages-list {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-        }
-
-        .page-card {
-            background: white;
+        /* ... (keep all the previous styles) ... */
+        .debug-info {
+            margin-top: 1rem;
             padding: 1rem;
+            background: #f8f9fa;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .page-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        .page-card.active {
-            border: 2px solid var(--primary);
-        }
-
-        .metrics-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-
-        .metrics-container.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .metric-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .metric-title {
-            color: var(--text);
+            font-family: monospace;
             font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--primary);
-        }
-
-        .chart-container {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-top: 2rem;
-        }
-
-        .loading {
+            white-space: pre-wrap;
             display: none;
-            text-align: center;
-            padding: 2rem;
-            font-size: 1.2rem;
-            color: var(--text);
-        }
-
-        .error-message {
-            display: none;
-            color: #dc3545;
-            background: #ffe6e6;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1rem 0;
         }
     </style>
 </head>
 <body>
     <div class="dashboard">
+        <div class="header">
+            <h1>Facebook Pages Dashboard</h1>
+            <p>Select a page to view its performance metrics</p>
+        </div>
+
         <div class="pages-list" id="pagesList">
-            <!-- Pages will be populated here -->
+            {% for page in partner.pages %}
+            <div class="page-card" onclick="loadPageMetrics('{{ page.name }}')">
+                {{ page.name }}
+            </div>
+            {% endfor %}
         </div>
 
         <div class="error-message" id="errorMessage"></div>
         <div class="loading" id="loading">Loading metrics...</div>
+        <div class="debug-info" id="debugInfo"></div>
 
         <div class="metrics-container" id="metricsContainer">
             <div class="metric-card">
@@ -868,36 +777,26 @@
 
     <script>
         let currentChart = null;
+        const DEBUG = true; // Set to false in production
 
-        async function fetchPages() {
-            try {
-                const response = await fetch('/api/pages');
-                const data = await response.json();
-                
-                const pagesList = document.getElementById('pagesList');
-                pagesList.innerHTML = '';
-
-                data.pages.forEach(page => {
-                    const pageCard = document.createElement('div');
-                    pageCard.className = 'page-card';
-                    pageCard.textContent = page.name;
-                    pageCard.onclick = () => loadPageMetrics(page.name);
-                    pagesList.appendChild(pageCard);
-                });
-            } catch (error) {
-                showError('Failed to load pages');
+        // Load initial page metrics if there are pages
+        window.onload = function() {
+            const pageCards = document.querySelectorAll('.page-card');
+            if (pageCards.length > 0) {
+                loadPageMetrics(pageCards[0].textContent.trim());
             }
-        }
+        };
 
         async function loadPageMetrics(pageName) {
             const loading = document.getElementById('loading');
             const metricsContainer = document.getElementById('metricsContainer');
             const errorMessage = document.getElementById('errorMessage');
+            const debugInfo = document.getElementById('debugInfo');
 
             // Update active page card
             document.querySelectorAll('.page-card').forEach(card => {
                 card.classList.remove('active');
-                if (card.textContent === pageName) {
+                if (card.textContent.trim() === pageName) {
                     card.classList.add('active');
                 }
             });
@@ -905,9 +804,34 @@
             loading.style.display = 'block';
             metricsContainer.classList.remove('visible');
             errorMessage.style.display = 'none';
+            debugInfo.style.display = 'none';
 
             try {
-                const response = await fetch(`/api/fetch_page_metrics/${encodeURIComponent(pageName)}`);
+                const response = await fetch(`/api/fetch_page_metrics/${encodeURIComponent(pageName)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                // Log the raw response for debugging
+                if (DEBUG) {
+                    const clonedResponse = response.clone();
+                    const rawText = await clonedResponse.text();
+                    debugInfo.textContent = `Status: ${response.status}\nHeaders: ${JSON.stringify(Object.fromEntries(response.headers), null, 2)}\nResponse:\n${rawText}`;
+                    debugInfo.style.display = 'block';
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Try to parse the response as JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Response was not JSON');
+                }
+
                 const data = await response.json();
 
                 if (data.error) {
@@ -919,7 +843,8 @@
                 
                 metricsContainer.classList.add('visible');
             } catch (error) {
-                showError(error.message);
+                console.error('Error:', error);
+                showError(`Error loading metrics: ${error.message}`);
             } finally {
                 loading.style.display = 'none';
             }
@@ -992,9 +917,6 @@
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
         }
-
-        // Initialize the dashboard
-        fetchPages();
     </script>
 
       </footer>
