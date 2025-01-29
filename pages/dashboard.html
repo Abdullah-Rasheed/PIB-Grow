@@ -522,87 +522,185 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/framer-motion@4/dist/framer-motion.umd.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Analytics Dashboard</title>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .card { transition: transform 0.3s ease-in-out; }
-        .card:hover { transform: scale(1.05); }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/framer-motion/10.8.0/framer-motion.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Facebook Analytics Dashboard</h1>
-            <button id="logout">Logout</button>
-        </header>
-        <section class="user-info">
-            <h2 id="user-name">Loading...</h2>
-            <p id="user-email"></p>
-            <p>Total Engagement: <span id="total-engagement">0</span></p>
-        </section>
-        <section class="pages">
-            <h3>Your Pages</h3>
-            <div id="pages-list" class="grid"></div>
-        </section>
-        <section class="chart-section">
-            <canvas id="engagementChart"></canvas>
-        </section>
-    </div>
-    <script>
-        async function fetchData() {
-            try {
-                let response = await fetch('/dashboard-data');
-                let data = await response.json();
-                document.getElementById('user-name').textContent = data.name;
-                document.getElementById('user-email').textContent = data.email;
-                document.getElementById('total-engagement').textContent = data.total_engagement;
-                
-                let pagesList = document.getElementById('pages-list');
-                pagesList.innerHTML = '';
-                
-                data.pages.forEach(page => {
-                    let pageDiv = document.createElement('div');
-                    pageDiv.classList.add('page-card');
-                    pageDiv.innerHTML = `
-                        <h4>${page.name}</h4>
-                        <p>Engagement: ${page.engagement}</p>
-                        <p>Followers: ${page.followers}</p>
-                    `;
-                    pageDiv.onclick = () => updateChart(page);
-                    pagesList.appendChild(pageDiv);
-                });
-                
-                if (data.pages.length > 0) updateChart(data.pages[0]);
-            } catch (error) {
-                console.error("Failed to fetch data", error);
+        /* Global Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f6fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Dashboard Container */
+        .dashboard {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* User Info */
+        .user-info {
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .user-info button {
+            background: #1877f2;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        .user-info button:hover {
+            background: #155ab6;
+        }
+
+        /* Page List */
+        .page-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .page-list li {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: 0.3s;
+        }
+
+        .page-list li:hover {
+            background: #eef3ff;
+        }
+
+        .page-list a {
+            text-decoration: none;
+            font-weight: bold;
+            color: #1877f2;
+            cursor: pointer;
+        }
+
+        /* Metrics Container */
+        .metrics-container {
+            margin-top: 20px;
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .metric-box {
+            background: white;
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: 0.3s;
+        }
+
+        .metric-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-box h4 {
+            margin: 0;
+            color: #333;
+        }
+
+        .metric-box p {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .metrics {
+                flex-direction: column;
             }
         }
+    </style>
 
-        function updateChart(page) {
-            let ctx = document.getElementById('engagementChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Reach', 'Engagement', 'Followers'],
-                    datasets: [{
-                        label: page.name,
-                        data: [page.reach, page.engagement, page.followers],
-                        backgroundColor: ['blue', 'green', 'orange']
-                    }]
-                }
-            });
+    <script>
+        function loadPageMetrics(pageId, pageName) {
+            fetch(`/page/${pageId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error loading data: ' + data.error);
+                        return;
+                    }
+
+                    document.getElementById('page-title').innerText = pageName;
+                    document.getElementById('page-reach').innerText = data.reach;
+                    document.getElementById('page-engagement').innerText = data.engagement;
+                    document.getElementById('page-followers').innerText = data.followers;
+                })
+                .catch(error => {
+                    alert('Failed to fetch data.');
+                    console.error(error);
+                });
         }
-
-        document.getElementById('logout').onclick = () => window.location.href = '/logout';
-        fetchData();
     </script>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Facebook Analytics Dashboard</h1>
+        <p>View and analyze your Facebook page performance</p>
+
+        <!-- User Details -->
+        <div class="user-info">
+            <h2>{{ partner['name'] }}</h2>
+            <p>{{ partner['email'] }}</p>
+            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
+            <button onclick="window.location.href='/logout'">Logout</button>
+        </div>
+
+        <!-- List of Facebook Pages -->
+        <h3>Your Pages</h3>
+        <ul class="page-list">
+            {% for page in partner['pages'] %}
+            <li>
+                <a href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
+                    {{ page.name }}
+                </a> (Engagement: {{ page.engagement }})
+            </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Dynamic Page Metrics -->
+        <div class="metrics-container">
+            <h3 id="page-title">Select a page to view metrics</h3>
+            <div class="metrics">
+                <div class="metric-box">
+                    <h4>Reach</h4>
+                    <p id="page-reach">-</p>
+                </div>
+                <div class="metric-box">
+                    <h4>Engagement</h4>
+                    <p id="page-engagement">-</p>
+                </div>
+                <div class="metric-box">
+                    <h4>Followers</h4>
+                    <p id="page-followers">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 
