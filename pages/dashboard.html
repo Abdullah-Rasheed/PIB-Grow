@@ -522,10 +522,12 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics Dashboard</title>
+    <title>Facebook Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
     <style>
         body {
             font-family: sans-serif;
@@ -607,6 +609,12 @@
         }
 
     </style>
+      .chart-container {
+        width: 100%; /* Or a specific width */
+        height: 200px; /* Or a specific height */
+        margin-top: 10px; /* Space above the chart */
+      }
+    </style>
     <script>
         function loadPageMetrics(pageId, pageName) {
             fetch(`/page/${pageId}`)
@@ -621,47 +629,82 @@
                     document.getElementById('page-reach').innerText = data.reach;
                     document.getElementById('page-engagement').innerText = data.engagement;
                     document.getElementById('page-followers').innerText = data.followers;
+
+                    // Update charts
+                    updateChart('reachChart', data.reach);
+                    updateChart('engagementChart', data.engagement);
+                    updateChart('followersChart', data.followers);
+
                 })
                 .catch(error => {
                     alert('Failed to fetch data.');
                     console.error(error);
                 });
         }
+
+        function createChart(canvasId) {
+          const ctx = document.getElementById(canvasId).getContext('2d');
+          return new Chart(ctx, {
+            type: 'line', // You can change the chart type (e.g., 'bar', 'pie')
+            data: {
+              labels: ['Current'], // Initial label
+              datasets: [{
+                label: canvasId.replace('Chart', '').toUpperCase(), // Chart title
+                data: [0],  // Initial data
+                borderColor: '#007bff', // Blue line
+                borderWidth: 2,
+                fill: false // Don't fill area under line
+              }]
+            },
+            options: {
+              responsive: true, // Make chart responsive
+              maintainAspectRatio: false, // Allow chart to scale to container size
+              scales: {
+                y: {
+                  beginAtZero: true // Start y-axis at 0
+                }
+              }
+            }
+          });
+        }
+
+        function updateChart(chartId, newData) {
+          const chart = Chart.getChart(chartId);
+          if (chart) {
+            chart.data.datasets[0].data = [newData]; // Update data
+            chart.update();
+          }
+        }
+
+        // Create charts on page load
+        window.addEventListener('DOMContentLoaded', (event) => {
+          createChart('reachChart');
+          createChart('engagementChart');
+          createChart('followersChart');
+        });
+
     </script>
 </head>
 <body>
-    <h1>Facebook Analytics</h1>
-
-    <div class="user-info">
-        <div>
-            <h2>{{ partner['name'] }}</h2>
-            <p>{{ partner['email'] }}</p>
-            <p>Total Engagement: {{ partner['total_engagement'] }}</p>
-        </div>
-      <button id="logout-button" onclick="window.location.href='/logout'">Logout</button>
-    </div>
-
-    <h3>Your Pages</h3>
-    <ul class="page-list">
-        {% for page in partner['pages'] %}
-        <li>
-            <a class="page-link" href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
-                {{ page.name }}
-            </a> (Engagement: {{ page.engagement }})
-        </li>
-        {% endfor %}
-    </ul>
-
     <div class="metrics">
         <h3 id="page-title">Select a page to view metrics</h3>
         <div class="metric">
             <span class="metric-label">Reach 📈</span> <span class="metric-value" id="page-reach">-</span>
+            <div class="chart-container">
+              <canvas id="reachChart"></canvas>
+            </div>
         </div>
         <div class="metric">
             <span class="metric-label">Engagement ❤️</span> <span class="metric-value" id="page-engagement">-</span>
+            <div class="chart-container">
+              <canvas id="engagementChart"></canvas>
+            </div>
         </div>
         <div class="metric">
             <span class="metric-label">Followers 👥</span> <span class="metric-value" id="page-followers">-</span>
+            <div class="chart-container">
+              <canvas id="followersChart"></canvas>
+            </div>
         </div>
     </div>
 
