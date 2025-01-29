@@ -522,10 +522,10 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-  <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics</title>
+    <title>Facebook Analytics Dashboard</title>
     <style>
         body {
             font-family: sans-serif;
@@ -541,15 +541,13 @@
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 5px;
-            display: flex; /* Use flexbox for layout */
-            align-items: center; /* Vertically align items */
-            justify-content: space-between; /* Distribute space between items */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-
-        .user-info > div { /* Group name/email */
-            flex: 1; /* Allow them to grow equally */
+        .user-info > div {
+            flex: 1;
         }
-
         .page-list {
             list-style: none;
             padding: 0;
@@ -575,17 +573,26 @@
             border: 1px solid #ddd;
             padding: 20px;
             border-radius: 5px;
+            display: grid; /* Use grid for layout */
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive columns */
+            gap: 20px; /* Spacing between grid items */
         }
         .metric {
-            margin-bottom: 10px;
-            display: flex; /* Use flexbox for alignment */
-            align-items: center; /* Vertically center */
-        }
-        .metric-label {
-            font-weight: bold;
-            width: 100px;
+            background-color: white; /* Card-like background */
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            text-align: center; /* Center the content */
         }
 
+        .metric-label {
+            font-weight: bold;
+            display: block; /* Label on its own line */
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 1.2em; /* Larger value */
+        }
         #logout-button {
           background-color: #dc3545;
           color: white;
@@ -623,7 +630,7 @@
     </script>
 </head>
 <body>
-    <h1>Facebook Analytics Dashboard</h1>
+    <h1>Facebook Analytics</h1>
 
     <div class="user-info">
         <div>
@@ -648,13 +655,13 @@
     <div class="metrics">
         <h3 id="page-title">Select a page to view metrics</h3>
         <div class="metric">
-            <span class="metric-label">Reach: 📈</span> <span id="page-reach">-</span>
+            <span class="metric-label">Reach 📈</span> <span class="metric-value" id="page-reach">-</span>
         </div>
         <div class="metric">
-            <span class="metric-label">Engagement: ❤️</span> <span id="page-engagement">-</span>
+            <span class="metric-label">Engagement ❤️</span> <span class="metric-value" id="page-engagement">-</span>
         </div>
         <div class="metric">
-            <span class="metric-label">Followers: 👥</span> <span id="page-followers">-</span>
+            <span class="metric-label">Followers 👥</span> <span class="metric-value" id="page-followers">-</span>
         </div>
     </div>
 
