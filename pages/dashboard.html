@@ -607,7 +607,7 @@
     </style>
     <script>
         function loadPageMetrics(pageId, pageName) {
-            fetch(`/page/${pageId}`)
+            fetch(`/page/${pageId}`) // Keep your original fetch URL
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
