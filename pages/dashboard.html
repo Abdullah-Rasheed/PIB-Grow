@@ -522,171 +522,119 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics Dashboard</title>
-    <style>
-        /* Global Styles */
+ <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f6fa;
-            color: #333;
             margin: 0;
             padding: 20px;
+            background-color: #f4f4f4;
             text-align: center;
         }
-
-        .dashboard {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: #1877f2;
-        }
-
-        .metrics-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .metric-box {
+        .container {
+            max-width: 600px;
+            margin: auto;
             background: white;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: left;
         }
-
-        .metric-box h3 {
-            font-size: 16px;
-            color: #555;
-            margin-bottom: 5px;
+        h1, h2, h3 {
+            color: #333;
         }
-
-        .metric-box p {
-            font-size: 24px;
-            font-weight: bold;
-            margin: 0;
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
         }
-
-        .sub-metrics {
-            font-size: 14px;
-            color: #777;
-            margin-top: 5px;
+        .button:hover {
+            background-color: #0056b3;
         }
-
-        .positive {
-            color: green;
+        .page-list {
+            list-style: none;
+            padding: 0;
         }
-
-        .negative {
+        .page-list li {
+            background: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .page-list li:hover {
+            background: #eaeaea;
+        }
+        .metrics {
+            display: none;
+            padding: 15px;
+            margin-top: 10px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .error {
             color: red;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 600px) {
-            .metrics-container {
-                grid-template-columns: 1fr;
-            }
+            font-weight: bold;
         }
     </style>
-
     <script>
         function loadPageMetrics(pageId, pageName) {
             fetch(`/page/${pageId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        alert('Error loading data: ' + data.error);
+                        document.getElementById('error-message').innerText = 'Error: ' + data.error;
                         return;
                     }
-
+                    document.getElementById('error-message').innerText = '';
                     document.getElementById('page-title').innerText = pageName;
-                    document.getElementById('views').innerText = data.views;
-                    document.getElementById('views-change').innerText = data.views_change + "%";
-                    document.getElementById('views-change').className = data.views_change < 0 ? "negative" : "positive";
-
-                    document.getElementById('reach').innerText = data.reach;
-                    document.getElementById('reach-change').innerText = data.reach_change + "%";
-                    document.getElementById('reach-change').className = data.reach_change < 0 ? "negative" : "positive";
-
-                    document.getElementById('follows').innerText = data.follows;
-                    document.getElementById('follows-change').innerText = data.follows_change + "%";
-                    document.getElementById('follows-change').className = data.follows_change < 0 ? "negative" : "positive";
-
-                    document.getElementById('unfollows').innerText = data.unfollows;
-                    document.getElementById('net-follows').innerText = data.net_follows;
+                    document.getElementById('page-reach').innerHTML = `<i class='fas fa-chart-line'></i> Reach: ${data.reach}`;
+                    document.getElementById('page-engagement').innerHTML = `<i class='fas fa-heart'></i> Engagement: ${data.engagement}`;
+                    document.getElementById('page-followers').innerHTML = `<i class='fas fa-user-friends'></i> Followers: ${data.followers}`;
+                    document.getElementById('metrics-container').style.display = 'block';
                 })
                 .catch(error => {
-                    alert('Failed to fetch data.');
+                    document.getElementById('error-message').innerText = 'Failed to fetch data.';
                     console.error(error);
                 });
         }
     </script>
 </head>
 <body>
-    <div class="dashboard">
-        <h1>Facebook Analytics Dashboard</h1>
+    <div class="container">
+        <h1>📊 Facebook Analytics Dashboard</h1>
         <p>View and analyze your Facebook page performance</p>
 
-        <!-- List of Facebook Pages -->
-        <h3>Select a Page</h3>
-        <ul>
+        <div>
+            <h2>{{ partner['name'] }}</h2>
+            <p>{{ partner['email'] }}</p>
+            <p>Total Engagement: <strong>{{ partner['total_engagement'] }}</strong></p>
+            <button class="button" onclick="window.location.href='/logout'">Logout</button>
+        </div>
+
+        <h3>Your Pages</h3>
+        <ul class="page-list">
             {% for page in partner['pages'] %}
-            <li>
-                <a href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
-                    {{ page.name }}
-                </a>
+            <li onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
+                <strong>{{ page.name }}</strong> <br>
+                Engagement: {{ page.engagement }}
             </li>
             {% endfor %}
         </ul>
 
-        <!-- Metrics Display -->
-        <h3 id="page-title">Select a page to view metrics</h3>
-        <div class="metrics-container">
-            <!-- Views -->
-            <div class="metric-box">
-                <h3>Views</h3>
-                <p id="views">-</p>
-                <div class="sub-metrics">Change: <span id="views-change">-</span></div>
-            </div>
+        <div class="error" id="error-message"></div>
 
-            <!-- Reach -->
-            <div class="metric-box">
-                <h3>Reach</h3>
-                <p id="reach">-</p>
-                <div class="sub-metrics">Change: <span id="reach-change">-</span></div>
-            </div>
-
-            <!-- Follows -->
-            <div class="metric-box">
-                <h3>Follows</h3>
-                <p id="follows">-</p>
-                <div class="sub-metrics">Change: <span id="follows-change">-</span></div>
-            </div>
-
-            <!-- Unfollows -->
-            <div class="metric-box">
-                <h3>Unfollows</h3>
-                <p id="unfollows">-</p>
-            </div>
-
-            <!-- Net Follows -->
-            <div class="metric-box">
-                <h3>Net Follows</h3>
-                <p id="net-follows">-</p>
-            </div>
+        <div id="metrics-container" class="metrics">
+            <h3 id="page-title">Select a page to view metrics</h3>
+            <p id="page-reach"><i class='fas fa-chart-line'></i> Reach: -</p>
+            <p id="page-engagement"><i class='fas fa-heart'></i> Engagement: -</p>
+            <p id="page-followers"><i class='fas fa-user-friends'></i> Followers: -</p>
         </div>
     </div>
-</body>
       </footer>
     </div>
   </main>
