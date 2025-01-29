@@ -131,7 +131,7 @@ def dashboard():
             # Fetch page insights using page token
             insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
             insights_params = {
-                "metric": "page_engaged_users",
+                "metric": "page_impressions",
                 "period": "day",
                 "access_token": page_token
             }
@@ -232,7 +232,7 @@ def fetch_page_metrics(page_name):
 
         # Fetch insights
         insights_response = requests.get(
-            f"https://graph.facebook.com/v22.0/{page_id}/insights?metric=",
+            f"https://graph.facebook.com/v22.0/{page_id}/insights",
             params={
                 "metric": "page_impressions,page_post_engagements,page_fans",
                 "period": "day",
