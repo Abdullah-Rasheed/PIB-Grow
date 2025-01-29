@@ -527,7 +527,289 @@
             card.addEventListener('mouseout', () => card.classList.remove('shadow-lg'));
           });
         </script>         
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Facebook Metrics Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #1877f2;
+            --secondary: #42b72a;
+            --bg: #f0f2f5;
+            --text: #1c1e21;
+        }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .pages-list {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .page-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .page-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .page-card.active {
+            border: 2px solid var(--primary);
+        }
+
+        .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .metrics-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric-title {
+            color: var(--text);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: var(--text);
+        }
+
+        .error-message {
+            display: none;
+            color: #dc3545;
+            background: #ffe6e6;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="pages-list" id="pagesList">
+            <!-- Pages will be populated here -->
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="loading" id="loading">Loading metrics...</div>
+
+        <div class="metrics-container" id="metricsContainer">
+            <div class="metric-card">
+                <div class="metric-title">Page Reach</div>
+                <div class="metric-value" id="reachValue">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Engagement</div>
+                <div class="metric-value" id="engagementValue">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Followers</div>
+                <div class="metric-value" id="followersValue">-</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="metricsChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let currentChart = null;
+
+        async function fetchPages() {
+            try {
+                const response = await fetch('/api/pages');
+                const data = await response.json();
+                
+                const pagesList = document.getElementById('pagesList');
+                pagesList.innerHTML = '';
+
+                data.pages.forEach(page => {
+                    const pageCard = document.createElement('div');
+                    pageCard.className = 'page-card';
+                    pageCard.textContent = page.name;
+                    pageCard.onclick = () => loadPageMetrics(page.name);
+                    pagesList.appendChild(pageCard);
+                });
+            } catch (error) {
+                showError('Failed to load pages');
+            }
+        }
+
+        async function loadPageMetrics(pageName) {
+            const loading = document.getElementById('loading');
+            const metricsContainer = document.getElementById('metricsContainer');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Update active page card
+            document.querySelectorAll('.page-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.textContent === pageName) {
+                    card.classList.add('active');
+                }
+            });
+
+            loading.style.display = 'block';
+            metricsContainer.classList.remove('visible');
+            errorMessage.style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/fetch_page_metrics/${encodeURIComponent(pageName)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                updateMetrics(data.page_metrics);
+                updateChart(data.page_metrics);
+                
+                metricsContainer.classList.add('visible');
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function updateMetrics(metrics) {
+            document.getElementById('reachValue').textContent = formatNumber(metrics.reach);
+            document.getElementById('engagementValue').textContent = formatNumber(metrics.engagement);
+            document.getElementById('followersValue').textContent = formatNumber(metrics.followers);
+        }
+
+        function updateChart(metrics) {
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Reach', 'Engagement', 'Followers'],
+                    datasets: [{
+                        label: 'Page Metrics',
+                        data: [metrics.reach, metrics.engagement, metrics.followers],
+                        backgroundColor: [
+                            'rgba(24, 119, 242, 0.7)',
+                            'rgba(66, 183, 42, 0.7)',
+                            'rgba(53, 120, 229, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(24, 119, 242, 1)',
+                            'rgba(66, 183, 42, 1)',
+                            'rgba(53, 120, 229, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animations: {
+                        tension: {
+                            duration: 1000,
+                            easing: 'linear',
+                            from: 1,
+                            to: 0,
+                            loop: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Initialize the dashboard
+        fetchPages();
+    </script>
+</body>
+</html>
       </footer>
     </div>
   </main>
