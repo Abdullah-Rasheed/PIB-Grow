@@ -528,13 +528,59 @@
           });
         </script>         
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Facebook Analytics Dashboard</title>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/framer-motion@4/dist/framer-motion.umd.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card { transition: transform 0.3s ease-in-out; }
+        .card:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="max-w-5xl mx-auto py-10 px-6">
+        <h1 class="text-3xl font-bold mb-6 text-center">Facebook Analytics Dashboard</h1>
+
+        <!-- User Details -->
+        <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold">{{ partner['name'] }}</h2>
+            <p class="text-gray-600">{{ partner['email'] }}</p>
+            <p class="text-blue-500 font-semibold">Total Engagement: {{ partner['total_engagement'] }}</p>
+            <button onclick="window.location.href='/logout'" class="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">Logout</button>
+        </div>
+
+        <!-- List of Facebook Pages -->
+        <h3 class="text-2xl font-semibold mb-4">Your Pages</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for page in partner['pages'] %}
+            <div class="card bg-white shadow-lg rounded-lg p-4 cursor-pointer hover:shadow-xl" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
+                <h4 class="text-lg font-semibold">{{ page.name }}</h4>
+                <p class="text-gray-500">Engagement: {{ page.engagement }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Dynamic Page Metrics Section -->
+        <div id="metrics-container" class="mt-10 hidden">
+            <h3 id="page-title" class="text-2xl font-semibold text-center">Page Metrics</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div class="bg-white shadow-md rounded-lg p-6 text-center">
+                    <h4 class="text-lg font-semibold">Reach</h4>
+                    <p id="page-reach" class="text-3xl font-bold text-blue-600">-</p>
+                </div>
+                <div class="bg-white shadow-md rounded-lg p-6 text-center">
+                    <h4 class="text-lg font-semibold">Engagement</h4>
+                    <p id="page-engagement" class="text-3xl font-bold text-green-600">-</p>
+                </div>
+                <div class="bg-white shadow-md rounded-lg p-6 text-center">
+                    <h4 class="text-lg font-semibold">Followers</h4>
+                    <p id="page-followers" class="text-3xl font-bold text-purple-600">-</p>
+                </div>
+            </div>
+            <canvas id="chart" class="mt-6"></canvas>
+        </div>
+    </div>
+
     <script>
         function loadPageMetrics(pageId, pageName) {
             fetch(`/page/${pageId}`)
@@ -545,47 +591,43 @@
                         return;
                     }
 
+                    document.getElementById('metrics-container').classList.remove('hidden');
                     document.getElementById('page-title').innerText = pageName;
-                    document.getElementById('page-reach').innerText = "Reach: " + data.reach;
-                    document.getElementById('page-engagement').innerText = "Engagement: " + data.engagement;
-                    document.getElementById('page-followers').innerText = "Followers: " + data.followers;
+                    document.getElementById('page-reach').innerText = data.reach;
+                    document.getElementById('page-engagement').innerText = data.engagement;
+                    document.getElementById('page-followers').innerText = data.followers;
+                    updateChart(data.reach, data.engagement, data.followers);
                 })
                 .catch(error => {
                     alert('Failed to fetch data.');
                     console.error(error);
                 });
         }
+
+        function updateChart(reach, engagement, followers) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Reach', 'Engagement', 'Followers'],
+                    datasets: [{
+                        label: 'Page Performance',
+                        data: [reach, engagement, followers],
+                        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6'],
+                        borderRadius: 10,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
     </script>
-</head>
-<body>
-    <h1>Facebook Analytics Dashboard</h1>
-    <p>View and analyze your Facebook page performance</p>
-
-    <!-- User Details -->
-    <div>
-        <h2>{{ partner['name'] }}</h2>
-        <p>{{ partner['email'] }}</p>
-        <p>Total Engagement: {{ partner['total_engagement'] }}</p>
-        <button onclick="window.location.href='/logout'">Logout</button>
-    </div>
-
-    <!-- List of Facebook Pages -->
-    <h3>Your Pages</h3>
-    <ul>
-        {% for page in partner['pages'] %}
-        <li>
-            <a href="javascript:void(0);" onclick="loadPageMetrics('{{ page.id }}', '{{ page.name }}')">
-                {{ page.name }}
-            </a> (Engagement: {{ page.engagement }})
-        </li>
-        {% endfor %}
-    </ul>
-
-    <!-- Dynamic Page Metrics Section -->
-    <h3 id="page-title">Select a page to view metrics</h3>
-    <p id="page-reach">Reach: -</p>
-    <p id="page-engagement">Engagement: -</p>
-    <p id="page-followers">Followers: -</p>
 </body>
 
 
