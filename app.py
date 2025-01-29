@@ -232,7 +232,7 @@ def fetch_page_metrics(page_name):
 
         # Fetch insights
         insights_response = requests.get(
-            f"https://graph.facebook.com/v22.0/{page_id}/insights",
+            f"https://graph.facebook.com/v22.0/{page_id}/insights?metric=",
             params={
                 "metric": "page_impressions,page_post_engagements,page_fans",
                 "period": "day",
