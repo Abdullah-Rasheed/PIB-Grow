@@ -450,29 +450,35 @@
 </div>
 
 <script>
-  // Performance Metrics Graph
-  const ctx3 = document.getElementById('performanceChart').getContext('2d');
-  new Chart(ctx3, {
-    type: 'line',
-    data: {
-      labels: {{ performance.labels | tojson | safe }},
-      datasets: [
-        {
-          label: 'Revenue ($)',
-          data: {{ performance.data | tojson | safe }},
-          borderColor: '#007bff',
-          backgroundColor: 'rgba(0, 123, 255, 0.2)',
-          borderWidth: 2,
-          fill: true,
+  document.addEventListener("DOMContentLoaded", function() {
+    const ctx3 = document.getElementById('performanceChart');
+    if (ctx3) {
+      new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: {{ performance.labels | tojson | safe }},
+          datasets: [
+            {
+              label: 'Revenue ($)',
+              data: {{ performance.data | tojson | safe }},
+              borderColor: '#007bff',
+              backgroundColor: 'rgba(0, 123, 255, 0.2)',
+              borderWidth: 2,
+              fill: true,
+            },
+          ],
         },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-    },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+        },
+      });
+    } else {
+      console.error("Canvas element for performance chart not found.");
+    }
   });
 </script>
+
 
 
               
