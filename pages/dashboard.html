@@ -709,9 +709,16 @@
             // Update UI with post details and insights data
             postDetails.innerHTML = `<span>Post ID: ${postId}</span>`;
 
+            // Check for insights and update each metric
             if (insights.length > 0) {
+                const postClicks = getMetric(insights, 'post_clicks');
+                const postImpressions = getMetric(insights, 'post_impressions');
+                const postReactions = getMetric(insights, 'post_reactions_by_type_total');
+                
                 insightsData.innerHTML = `
-                    <span>Post Clicks: ${insights[0].values[0].value}</span>
+                    <div><span>Post Clicks: ${postClicks}</span></div>
+                    <div><span>Post Impressions: ${postImpressions}</span></div>
+                    <div><span>Post Reactions: ${postReactions}</span></div>
                 `;
             } else {
                 insightsData.innerHTML = "<span>No insights available for this post.</span>";
@@ -722,6 +729,12 @@
             console.error('Error fetching insights:', error);
             alert('Error fetching insights.');
         }
+    }
+
+    // Helper function to extract metric value
+    function getMetric(insights, metricName) {
+        const metric = insights.find(item => item.name === metricName);
+        return metric ? metric.values[0].value : 0;
     }
 </script>
 
@@ -783,6 +796,7 @@
         margin-top: 5px;
     }
 </style>
+
 
 
       </footer>
