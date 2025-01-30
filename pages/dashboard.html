@@ -709,8 +709,8 @@
             // Update UI with post details and insights data
             postDetails.innerHTML = `<span>Post ID: ${postId}</span>`;
 
-            // Check for insights and update each metric
-            if (insights.length > 0) {
+            if (insights && insights.length > 0) {
+                // Extract values for metrics
                 const postClicks = getMetric(insights, 'post_clicks');
                 const postImpressions = getMetric(insights, 'post_impressions');
                 const postReactions = getMetric(insights, 'post_reactions_by_type_total');
@@ -733,8 +733,9 @@
 
     // Helper function to extract metric value
     function getMetric(insights, metricName) {
+        // Search for each metric by name and extract its value
         const metric = insights.find(item => item.name === metricName);
-        return metric ? metric.values[0].value : 0;
+        return metric ? metric.values[0].value : 0;  // Return 0 if metric is not found
     }
 </script>
 
@@ -796,7 +797,6 @@
         margin-top: 5px;
     }
 </style>
-
 
 
       </footer>
