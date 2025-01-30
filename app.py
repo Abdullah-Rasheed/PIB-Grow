@@ -42,49 +42,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/')
-@app.route('/sign-up')
-def sign_up():
-    return render_template('sign-up.html', facebook_app_id=FACEBOOK_APP_ID, redirect_uri=REDIRECT_URI)
-
-@app.route('/auth/callback')
-def facebook_callback():
-    code = request.args.get('code')
-    if not code:
-        return "Error: Authorization code not found.", 400
-
-    try:
-        # Exchange code for access token
-        token_url = 'https://graph.facebook.com/v22.0/oauth/access_token'
-        token_params = {
-            'client_id': FACEBOOK_APP_ID,
-            'redirect_uri': REDIRECT_URI,
-            'client_secret': FACEBOOK_APP_SECRET,
-            'code': code,
-        }
-        token_response = requests.get(token_url, params=token_params)
-        token_response.raise_for_status()
-
-        token_data = token_response.json()
-        access_token = token_data.get('access_token')
-        
-        if not access_token:
-            return "Error: Failed to retrieve access token.", 500
-
-        # Make session permanent and store token
-        session.permanent = True
-        session['access_token'] = access_token
-        
-        # Store token expiration if provided
-        if 'expires_in' in token_data:
-            session['token_expiration'] = datetime.now() + timedelta(seconds=token_data['expires_in'])
-
-        return redirect(url_for('dashboard'))
-
-    except requests.exceptions.RequestException as e:
-        print("Error during token exchange:", e)
-        return "An error occurred during authentication.", 500
-        
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -134,6 +91,7 @@ def dashboard():
                 total_engagement += total_page_engagement
 
                 labels.extend(insights['labels'])
+                engagement_data.extend(insights['engagement'])
                 partner_pages.append({
                     'name': page['name'],
                     'id': page_id,
@@ -223,20 +181,6 @@ def get_metric_value(insights_data, metric_name):
     if metric and metric.get('values'):
         return metric['values'][0].get('value', 0)
     return 0
-
-@app.route('/page/<page_id>')
-@login_required
-def get_page_data(page_id):
-    page_tokens = session.get('page_tokens', {})
-    page_token = page_tokens.get(page_id)
-
-    if not page_token:
-        return jsonify({'error': 'Page token not found'}), 403
-
-    insights = fetch_page_insights(page_id, page_token)
-    if insights:
-        return jsonify(insights['metrics'])
-    return jsonify({'error': 'Failed to fetch data'}), 500
 
 @app.route('/latest-post-insights/<page_id>')
 @login_required
