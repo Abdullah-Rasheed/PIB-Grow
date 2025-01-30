@@ -147,7 +147,7 @@ def dashboard():
                     'id': page_id,
                     'engagement': 0,
                     'status': 'Pending',
-                    'metrics': {"reach": 0, "engagement": 0, "followers": 0}
+                    'metrics': {"reach": 0, "engagement": 0, "followers": 0, "post_impressions": 0, "post_reactions": 0}
                 })
 
         partners = [{
@@ -183,7 +183,7 @@ def fetch_page_insights(page_id, page_token):
     try:
         insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
         insights_params = {
-            "metric": "page_impressions,page_post_engagements,page_fans",
+            "metric": "page_impressions,page_post_engagements,page_fans,post_reactions_by_type_total,post_impressions",
             "period": "day",
             "access_token": page_token
         }
@@ -202,11 +202,13 @@ def fetch_page_insights(page_id, page_token):
                 for entry in metric.get('values', [])
             ]
 
-            # Extract metrics
+            # Extract metrics, including the new ones
             metrics = {
                 "reach": get_metric_value(insights_data, "page_impressions"),
                 "engagement": get_metric_value(insights_data, "page_post_engagements"),
-                "followers": get_metric_value(insights_data, "page_fans")
+                "followers": get_metric_value(insights_data, "page_fans"),
+                "post_impressions": get_metric_value(insights_data, "post_impressions"),
+                "post_reactions": get_metric_value(insights_data, "post_reactions_by_type_total")
             }
 
             return {"engagement": engagement, "labels": labels, "metrics": metrics}
@@ -265,7 +267,7 @@ def get_latest_post_insights(page_id):
         # Get post insights (post clicks)
         insights_url = f"https://graph.facebook.com/v22.0/{latest_post_id}/insights"
         insights_params = {
-            "metric": "post_clicks",
+            "metric": "post_clicks,post_impressions,post_reactions_by_type_total",
             "access_token": page_token
         }
         insights_response = requests.get(insights_url, params=insights_params)
