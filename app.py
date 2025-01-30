@@ -258,9 +258,9 @@ def get_page_data(page_id):
         print("Error fetching page metrics:", e)
         return jsonify({'error': 'Server error'}), 500
 
-@app.route('/post-performance/<page_id>')
+@app.route('/latest-post-insights/<page_id>')
 @login_required
-def get_post_performance(page_id):
+def get_latest_post_insights(page_id):
     page_tokens = session.get('page_tokens', {})
     page_token = page_tokens.get(page_id)
 
@@ -268,50 +268,45 @@ def get_post_performance(page_id):
         return jsonify({'error': 'Page token not found'}), 403
 
     try:
-        # Step 1: Get recent posts
-        posts_url = f"https://graph.facebook.com/v19.0/{page_id}/posts"
+        # Get latest post ID
+        posts_url = f"https://graph.facebook.com/v22.0/{page_id}/posts"
         posts_params = {
-            "fields": "id,message,created_time,permalink_url",
             "access_token": page_token
         }
         posts_response = requests.get(posts_url, params=posts_params)
+
+        if posts_response.status_code != 200:
+            return jsonify({'error': 'Failed to fetch posts'}), posts_response.status_code
+
         posts_data = posts_response.json().get('data', [])
+        if not posts_data:
+            return jsonify({'error': 'No posts found for this page'}), 404
 
-        post_metrics = []
-        for post in posts_data:
-            post_id = post['id']
-            insights_url = f"https://graph.facebook.com/v19.0/{post_id}/insights"
-            insights_params = {
-                "metric": "post_impressions,post_clicks,post_reactions_by_type_total",
-                "access_token": page_token
-            }
-            insights_response = requests.get(insights_url, params=insights_params)
+        latest_post_id = posts_data[0]['id']  # Get the first (latest) post
+        print(f"✅ Latest Post ID: {latest_post_id}")
 
-            if insights_response.status_code != 200:
-                continue  # Skip if there's an error
+        # Get post insights (post clicks)
+        insights_url = f"https://graph.facebook.com/v22.0/{latest_post_id}/insights"
+        insights_params = {
+            "metric": "post_clicks",
+            "access_token": page_token
+        }
+        insights_response = requests.get(insights_url, params=insights_params)
 
-            insights_data = insights_response.json().get('data', [])
+        if insights_response.status_code != 200:
+            return jsonify({'error': 'Failed to fetch insights'}), insights_response.status_code
 
-            # Extract metrics
-            def get_metric(name):
-                metric = next((m for m in insights_data if m['name'] == name), None)
-                return metric['values'][0]['value'] if metric and metric.get('values') else 0
+        insights_data = insights_response.json().get('data', [])
 
-            post_metrics.append({
-                "id": post_id,
-                "message": post.get("message", "No text"),
-                "created_time": post["created_time"],
-                "url": post["permalink_url"],
-                "impressions": get_metric("post_impressions"),
-                "clicks": get_metric("post_clicks"),
-                "reactions": get_metric("post_reactions_by_type_total"),
-            })
-
-        return jsonify(post_metrics)
+        return jsonify({
+            "post_id": latest_post_id,
+            "insights": insights_data
+        })
 
     except requests.exceptions.RequestException as e:
-        print("Error fetching post performance:", e)
+        print("Error fetching post insights:", e)
         return jsonify({'error': 'Server error'}), 500
+
 
 
 @app.route('/assets/<path:filename>')
