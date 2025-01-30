@@ -123,68 +123,31 @@ def dashboard():
         engagement_data = []
         labels = []
 
+        # Fetch insights for each page
         for page in pages_data:
             page_id = page['id']
-            page_name = page['name']
             page_token = page['access_token']  # Use page-specific token
 
-            # Fetch page insights using page token
-            insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
-            insights_params = {
-                "metric": "page_impressions,page_post_engagements,page_fans",  # Added metrics
-                "period": "day",
-                "access_token": page_token
-            }
-            insights_response = requests.get(insights_url, params=insights_params)
-
-            if insights_response.status_code == 200:
-                insights_data = insights_response.json().get('data', [])
-                daily_engagement = [
-                    float(entry.get('value', 0)) 
-                    for metric in insights_data 
-                    for entry in metric.get('values', [])
-                ]
-                total_page_engagement = sum(daily_engagement)
+            insights = fetch_page_insights(page_id, page_token)
+            if insights:
+                total_page_engagement = sum(insights['engagement'])
                 total_engagement += total_page_engagement
 
-                labels.extend([
-                    entry.get('end_time', 'No Date')[:10] 
-                    for metric in insights_data 
-                    for entry in metric.get('values', [])
-                ])
-
-                # Fetch detailed metrics (reach, engagement, followers)
-                def get_metric_value(name):
-                    metric = next((m for m in insights_data if m['name'] == name), None)
-                    if metric and metric.get('values'):
-                        return metric['values'][0].get('value', 0)
-                    return 0
-
-                page_metrics = {
-                    "reach": get_metric_value("page_impressions"),
-                    "engagement": get_metric_value("page_post_engagements"),
-                    "followers": get_metric_value("page_fans")
-                }
-
+                labels.extend(insights['labels'])
                 partner_pages.append({
-                    'name': page_name,
+                    'name': page['name'],
                     'id': page_id,
                     'engagement': total_page_engagement,
                     'status': 'Processed',
-                    'metrics': page_metrics  # Add detailed metrics
+                    'metrics': insights['metrics'] 
                 })
-                engagement_data.extend(daily_engagement)
             else:
                 partner_pages.append({
-                    'name': page_name,
+                    'name': page['name'],
                     'id': page_id,
                     'engagement': 0,
                     'status': 'Pending',
-                    'metrics': {
-                        "reach": 0,
-                        "engagement": 0,
-                        "followers": 0
-                    }
+                    'metrics': {"reach": 0, "engagement": 0, "followers": 0}
                 })
 
         partners = [{
@@ -214,7 +177,51 @@ def dashboard():
     except Exception as e:
         print("Unexpected error:", e)
         return "An unexpected error occurred.", 500
+
+# Helper function to fetch insights
+def fetch_page_insights(page_id, page_token):
+    try:
+        insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
+        insights_params = {
+            "metric": "page_impressions,page_post_engagements,page_fans",
+            "period": "day",
+            "access_token": page_token
+        }
+        insights_response = requests.get(insights_url, params=insights_params)
         
+        if insights_response.status_code == 200:
+            insights_data = insights_response.json().get('data', [])
+            engagement = [
+                float(entry.get('value', 0)) 
+                for metric in insights_data 
+                for entry in metric.get('values', [])
+            ]
+            labels = [
+                entry.get('end_time', 'No Date')[:10] 
+                for metric in insights_data 
+                for entry in metric.get('values', [])
+            ]
+
+            # Extract metrics
+            metrics = {
+                "reach": get_metric_value(insights_data, "page_impressions"),
+                "engagement": get_metric_value(insights_data, "page_post_engagements"),
+                "followers": get_metric_value(insights_data, "page_fans")
+            }
+
+            return {"engagement": engagement, "labels": labels, "metrics": metrics}
+        return None
+    except requests.exceptions.RequestException as e:
+        print("Error fetching insights:", e)
+        return None
+
+# Helper function to extract individual metric value
+def get_metric_value(insights_data, metric_name):
+    metric = next((m for m in insights_data if m['name'] == metric_name), None)
+    if metric and metric.get('values'):
+        return metric['values'][0].get('value', 0)
+    return 0
+
 @app.route('/page/<page_id>')
 @login_required
 def get_page_data(page_id):
@@ -224,39 +231,10 @@ def get_page_data(page_id):
     if not page_token:
         return jsonify({'error': 'Page token not found'}), 403
 
-    try:
-        # Fetch insights for selected page
-        insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
-        insights_params = {
-            "metric": "page_impressions,page_post_engagements,page_fans",
-            "period": "day",
-            "access_token": page_token
-        }
-        insights_response = requests.get(insights_url, params=insights_params)
-
-        if insights_response.status_code != 200:
-            return jsonify({'error': 'Failed to fetch data'}), insights_response.status_code
-
-        insights_data = insights_response.json().get('data', [])
-
-        # Helper function to extract values
-        def get_metric_value(name):
-            metric = next((m for m in insights_data if m['name'] == name), None)
-            if metric and metric.get('values'):
-                return metric['values'][0].get('value', 0)
-            return 0
-
-        page_metrics = {
-            "reach": get_metric_value("page_impressions"),
-            "engagement": get_metric_value("page_post_engagements"),
-            "followers": get_metric_value("page_fans")
-        }
-
-        return jsonify(page_metrics)
-
-    except requests.exceptions.RequestException as e:
-        print("Error fetching page metrics:", e)
-        return jsonify({'error': 'Server error'}), 500
+    insights = fetch_page_insights(page_id, page_token)
+    if insights:
+        return jsonify(insights['metrics'])
+    return jsonify({'error': 'Failed to fetch data'}), 500
 
 @app.route('/latest-post-insights/<page_id>')
 @login_required
@@ -283,7 +261,6 @@ def get_latest_post_insights(page_id):
             return jsonify({'error': 'No posts found for this page'}), 404
 
         latest_post_id = posts_data[0]['id']  # Get the first (latest) post
-        print(f"✅ Latest Post ID: {latest_post_id}")
 
         # Get post insights (post clicks)
         insights_url = f"https://graph.facebook.com/v22.0/{latest_post_id}/insights"
@@ -306,8 +283,6 @@ def get_latest_post_insights(page_id):
     except requests.exceptions.RequestException as e:
         print("Error fetching post insights:", e)
         return jsonify({'error': 'Server error'}), 500
-
-
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
