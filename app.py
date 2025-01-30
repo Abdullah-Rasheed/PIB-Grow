@@ -42,6 +42,49 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.route('/')
+@app.route('/sign-up')
+def sign_up():
+    return render_template('sign-up.html', facebook_app_id=FACEBOOK_APP_ID, redirect_uri=REDIRECT_URI)
+
+@app.route('/auth/callback')
+def facebook_callback():
+    code = request.args.get('code')
+    if not code:
+        return "Error: Authorization code not found.", 400
+
+    try:
+        # Exchange code for access token
+        token_url = 'https://graph.facebook.com/v22.0/oauth/access_token'
+        token_params = {
+            'client_id': FACEBOOK_APP_ID,
+            'redirect_uri': REDIRECT_URI,
+            'client_secret': FACEBOOK_APP_SECRET,
+            'code': code,
+        }
+        token_response = requests.get(token_url, params=token_params)
+        token_response.raise_for_status()
+
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
+        
+        if not access_token:
+            return "Error: Failed to retrieve access token.", 500
+
+        # Make session permanent and store token
+        session.permanent = True
+        session['access_token'] = access_token
+        
+        # Store token expiration if provided
+        if 'expires_in' in token_data:
+            session['token_expiration'] = datetime.now() + timedelta(seconds=token_data['expires_in'])
+
+        return redirect(url_for('dashboard'))
+
+    except requests.exceptions.RequestException as e:
+        print("Error during token exchange:", e)
+        return "An error occurred during authentication.", 500
+        
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -80,32 +123,68 @@ def dashboard():
         engagement_data = []
         labels = []
 
-        # Fetch insights for each page
         for page in pages_data:
             page_id = page['id']
+            page_name = page['name']
             page_token = page['access_token']  # Use page-specific token
 
-            insights = fetch_page_insights(page_id, page_token)
-            if insights:
-                total_page_engagement = sum(insights['engagement'])
+            # Fetch page insights using page token
+            insights_url = f"https://graph.facebook.com/v22.0/{page_id}/insights"
+            insights_params = {
+                "metric": "page_impressions,page_post_engagements,page_fans",  # Added metrics
+                "period": "day",
+                "access_token": page_token
+            }
+            insights_response = requests.get(insights_url, params=insights_params)
+
+            if insights_response.status_code == 200:
+                insights_data = insights_response.json().get('data', [])
+                daily_engagement = [
+                    float(entry.get('value', 0)) 
+                    for metric in insights_data 
+                    for entry in metric.get('values', [])
+                ]
+                total_page_engagement = sum(daily_engagement)
                 total_engagement += total_page_engagement
 
-                labels.extend(insights['labels'])
-                engagement_data.extend(insights['engagement'])
+                labels.extend([
+                    entry.get('end_time', 'No Date')[:10] 
+                    for metric in insights_data 
+                    for entry in metric.get('values', [])
+                ])
+
+                # Fetch detailed metrics (reach, engagement, followers)
+                def get_metric_value(name):
+                    metric = next((m for m in insights_data if m['name'] == name), None)
+                    if metric and metric.get('values'):
+                        return metric['values'][0].get('value', 0)
+                    return 0
+
+                page_metrics = {
+                    "reach": get_metric_value("page_impressions"),
+                    "engagement": get_metric_value("page_post_engagements"),
+                    "followers": get_metric_value("page_fans")
+                }
+
                 partner_pages.append({
-                    'name': page['name'],
+                    'name': page_name,
                     'id': page_id,
                     'engagement': total_page_engagement,
                     'status': 'Processed',
-                    'metrics': insights['metrics'] 
+                    'metrics': page_metrics  # Add detailed metrics
                 })
+                engagement_data.extend(daily_engagement)
             else:
                 partner_pages.append({
-                    'name': page['name'],
+                    'name': page_name,
                     'id': page_id,
                     'engagement': 0,
                     'status': 'Pending',
-                    'metrics': {"reach": 0, "engagement": 0, "followers": 0, "post_impressions": 0, "post_reactions": 0}
+                    'metrics': {
+                        "reach": 0,
+                        "engagement": 0,
+                        "followers": 0
+                    }
                 })
 
         partners = [{
@@ -181,6 +260,20 @@ def get_metric_value(insights_data, metric_name):
     if metric and metric.get('values'):
         return metric['values'][0].get('value', 0)
     return 0
+
+@app.route('/page/<page_id>')
+@login_required
+def get_page_data(page_id):
+    page_tokens = session.get('page_tokens', {})
+    page_token = page_tokens.get(page_id)
+
+    if not page_token:
+        return jsonify({'error': 'Page token not found'}), 403
+
+    insights = fetch_page_insights(page_id, page_token)
+    if insights:
+        return jsonify(insights['metrics'])
+    return jsonify({'error': 'Failed to fetch data'}), 500
 
 @app.route('/latest-post-insights/<page_id>')
 @login_required
