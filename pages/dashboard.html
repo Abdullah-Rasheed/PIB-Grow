@@ -872,115 +872,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monetization Insights Dashboard</title>
+    <title>Monetization Insights</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f7fc;
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
         }
         .container {
-            max-width: 1200px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
+        
+            margin: auto;
         }
-        .header {
+        .heading {
             text-align: center;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            font-size: 2.5rem;
-            color: #333;
-        }
-        .insights {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
-        .card {
-            background-color: #f9f9f9;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 48%;
+            font-size: 26px;
+            font-weight: 600;
             margin-bottom: 20px;
+        }
+        .insight-card {
+            background: #ffffff;
             padding: 20px;
-            transition: transform 0.3s ease;
+            border-radius: 12px;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
-        .card:hover {
-            transform: translateY(-10px);
-        }
-        .card h2 {
-            color: #2c3e50;
-            font-size: 1.5rem;
+        .insight-card h3 {
+            font-size: 18px;
+            color: #444;
             margin-bottom: 10px;
         }
-        .card p {
-            font-size: 1rem;
-            color: #7f8c8d;
-        }
-        .card .value {
-            font-size: 1.25rem;
+        .insight-card p {
+            font-size: 16px;
             font-weight: bold;
-            color: #2ecc71;
+            color: #007bff;
         }
-        .card .value.error {
-            color: #e74c3c;
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .metrics-table th, .metrics-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .metrics-table th {
+            background: #007bff;
+            color: #fff;
+        }
+        .metrics-table tr:hover {
+            background: #f1f1f1;
+        }
+        .loader {
+            display: none;
+            text-align: center;
+            font-size: 16px;
+            margin-top: 20px;
+            color: #007bff;
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="header">
-            <h1>Monetization Insights</h1>
-            <p>Real-time performance of your videos</p>
+        <h1 class="heading">Monetization Insights</h1>
+
+        <!-- Monetization Summary -->
+        <div class="insight-card">
+            <h3>Total Earnings (USD)</h3>
+            <p id="earnings">$0.00</p>
         </div>
-        <div class="insights" id="insightsContainer">
-            <!-- Dynamically loaded content will appear here -->
+
+        <div class="insight-card">
+            <h3>Total Ad Impressions</h3>
+            <p id="impressions">0</p>
         </div>
+
+        <div class="insight-card">
+            <h3>Qualified Views</h3>
+            <p id="qualified_views">0</p>
+        </div>
+
+        <div class="insight-card">
+            <h3>Average CPM (Cost Per 1,000 Impressions)</h3>
+            <p id="cpm">$0.00</p>
+        </div>
+
+        <!-- Table -->
+        <table class="metrics-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Earnings</td>
+                    <td id="earnings_table">$0.00</td>
+                </tr>
+                <tr>
+                    <td>Ad Impressions</td>
+                    <td id="impressions_table">0</td>
+                </tr>
+                <tr>
+                    <td>Qualified Views</td>
+                    <td id="qualified_views_table">0</td>
+                </tr>
+                <tr>
+                    <td>CPM</td>
+                    <td id="cpm_table">$0.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="loader" id="loader">Fetching data...</div>
     </div>
 
     <script>
-        // Fetch monetization insights from your Flask backend
-        fetch('/monetization-insights/your_page_id')  // Replace 'your_page_id' with the actual page ID
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('insightsContainer');
-                container.innerHTML = '';  // Clear the container first
+        document.addEventListener("DOMContentLoaded", function () {
+            const pageId = "YOUR_PAGE_ID"; // Replace with dynamic page ID
+            const loader = document.getElementById("loader");
 
-                if (data.error) {
-                    container.innerHTML = `<div class="card"><p class="value error">${data.error}</p></div>`;
-                    return;
+            async function fetchMonetizationData() {
+                loader.style.display = "block";
+                try {
+                    const response = await fetch(`/monetization-insights/${pageId}`);
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        alert("Error fetching data: " + data.error);
+                        return;
+                    }
+
+                    // Initialize variables to calculate totals
+                    let totalEarnings = 0;
+                    let totalImpressions = 0;
+                    let totalQualifiedViews = 0;
+                    let totalCPM = 0;
+                    let count = 0;
+
+                    // Loop through the video insights data
+                    data.forEach((video) => {
+                        const insights = video.insights.data[0];
+                        const earnings = insights.values[0].value || 0;
+                        const qualifiedViews = insights.values[1].value || 0;
+                        const impressions = insights.values[2].value || 0;
+
+                        totalEarnings += earnings;
+                        totalImpressions += impressions;
+                        totalQualifiedViews += qualifiedViews;
+
+                        // Calculate CPM (Cost Per 1,000 Impressions)
+                        if (impressions > 0) {
+                            totalCPM += (earnings / impressions) * 1000;
+                        }
+                        count++;
+                    });
+
+                    // Calculate averages for CPM and other metrics
+                    totalCPM = totalImpressions > 0 ? (totalCPM / count).toFixed(2) : 0;
+
+                    // Update UI
+                    document.getElementById("earnings").textContent = `$${(totalEarnings / 100).toFixed(2)}`;
+                    document.getElementById("impressions").textContent = totalImpressions.toLocaleString();
+                    document.getElementById("qualified_views").textContent = totalQualifiedViews.toLocaleString();
+                    document.getElementById("cpm").textContent = `$${totalCPM}`;
+
+                    // Update Table
+                    document.getElementById("earnings_table").textContent = `$${(totalEarnings / 100).toFixed(2)}`;
+                    document.getElementById("impressions_table").textContent = totalImpressions.toLocaleString();
+                    document.getElementById("qualified_views_table").textContent = totalQualifiedViews.toLocaleString();
+                    document.getElementById("cpm_table").textContent = `$${totalCPM}`;
+                } catch (error) {
+                    console.error("Error fetching monetization data:", error);
+                } finally {
+                    loader.style.display = "none";
                 }
+            }
 
-                // Dynamically create cards for each video insight
-                data.forEach((video) => {
-                    const card = document.createElement('div');
-                    card.classList.add('card');
-
-                    const insights = video.insights.data[0];
-                    const earnings = insights.values[0].value || 0;
-                    const qualifiedViews = insights.values[1].value || 0;
-
-                    card.innerHTML = `
-                        <h2>Video ID: ${video.video_id}</h2>
-                        <p>Total Ad Break Earnings: <span class="value">$${earnings.toFixed(2)}</span></p>
-                        <p>Creator Monetization Qualified Views: <span class="value">${qualifiedViews}</span></p>
-                    `;
-
-                    container.appendChild(card);
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                const container = document.getElementById('insightsContainer');
-                container.innerHTML = `<div class="card"><p class="value error">Failed to load monetization insights.</p></div>`;
-            });
+            fetchMonetizationData();
+        });
     </script>
+
 </body>
+
       </footer>
     </div>
   </main>
