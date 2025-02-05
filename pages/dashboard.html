@@ -798,7 +798,174 @@
     }
 </style>
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monetization Insights</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+        .heading {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .insight-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .insight-card h3 {
+            font-size: 18px;
+            color: #444;
+            margin-bottom: 10px;
+        }
+        .insight-card p {
+            font-size: 16px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .metrics-table th, .metrics-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .metrics-table th {
+            background: #007bff;
+            color: #fff;
+        }
+        .metrics-table tr:hover {
+            background: #f1f1f1;
+        }
+        .loader {
+            display: none;
+            text-align: center;
+            font-size: 16px;
+            margin-top: 20px;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
 
+    <div class="container">
+        <h1 class="heading">Monetization Insights</h1>
+
+        <!-- Monetization Summary -->
+        <div class="insight-card">
+            <h3>Total Earnings (USD)</h3>
+            <p id="earnings">$0.00</p>
+        </div>
+
+        <div class="insight-card">
+            <h3>Total Ad Impressions</h3>
+            <p id="impressions">0</p>
+        </div>
+
+        <div class="insight-card">
+            <h3>Qualified Views</h3>
+            <p id="qualified_views">0</p>
+        </div>
+
+        <div class="insight-card">
+            <h3>Average CPM (Cost Per 1,000 Impressions)</h3>
+            <p id="cpm">$0.00</p>
+        </div>
+
+        <!-- Table -->
+        <table class="metrics-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Earnings</td>
+                    <td id="earnings_table">$0.00</td>
+                </tr>
+                <tr>
+                    <td>Ad Impressions</td>
+                    <td id="impressions_table">0</td>
+                </tr>
+                <tr>
+                    <td>Qualified Views</td>
+                    <td id="qualified_views_table">0</td>
+                </tr>
+                <tr>
+                    <td>CPM</td>
+                    <td id="cpm_table">$0.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="loader" id="loader">Fetching data...</div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const pageId = "YOUR_PAGE_ID"; // Replace with dynamic page ID
+            const loader = document.getElementById("loader");
+
+            async function fetchMonetizationData() {
+                loader.style.display = "block";
+                try {
+                    const response = await fetch(`/monetization-insights/${pageId}`);
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        alert("Error fetching data: " + data.error);
+                        return;
+                    }
+
+                    // Update UI
+                    document.getElementById("earnings").textContent = `$${(data.earnings / 100).toFixed(2)}`;
+                    document.getElementById("impressions").textContent = data.impressions.toLocaleString();
+                    document.getElementById("qualified_views").textContent = data.qualified_views.toLocaleString();
+                    document.getElementById("cpm").textContent = `$${(data.cpm / 100).toFixed(2)}`;
+
+                    // Update Table
+                    document.getElementById("earnings_table").textContent = `$${(data.earnings / 100).toFixed(2)}`;
+                    document.getElementById("impressions_table").textContent = data.impressions.toLocaleString();
+                    document.getElementById("qualified_views_table").textContent = data.qualified_views.toLocaleString();
+                    document.getElementById("cpm_table").textContent = `$${(data.cpm / 100).toFixed(2)}`;
+                } catch (error) {
+                    console.error("Error fetching monetization data:", error);
+                } finally {
+                    loader.style.display = "none";
+                }
+            }
+
+            fetchMonetizationData();
+        });
+    </script>
+
+</body>
       </footer>
     </div>
   </main>
