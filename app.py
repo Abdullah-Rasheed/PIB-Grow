@@ -323,6 +323,29 @@ def get_latest_post_insights(page_id):
         print("Error fetching post insights:", e)
         return jsonify({'error': 'Server error'}), 500
 
+@app.route('/monetization-insights/<page_id>')
+@login_required
+def monetization_insights(page_id):
+    page_tokens = session.get('page_tokens', {})
+    page_token = page_tokens.get(page_id)
+    
+    if not page_token:
+        return jsonify({'error': 'Page token not found or insufficient permissions'}), 403
+    
+    insights_url = f"https://graph.facebook.com/v22.0/{page_id}/video_insights"
+    insights_params = {
+        "metric": "total_video_ad_break_earnings,creator_monetization_qualified_views",
+        "access_token": page_token
+    }
+    
+    try:
+        response = requests.get(insights_url, params=insights_params)
+        response.raise_for_status()
+        data = response.json()
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
     return send_from_directory(app.static_folder, filename)
