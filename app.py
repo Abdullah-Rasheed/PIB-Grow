@@ -326,25 +326,53 @@ def get_latest_post_insights(page_id):
 @app.route('/monetization-insights/<page_id>')
 @login_required
 def monetization_insights(page_id):
+    """Fetch monetization insights for videos on a given page."""
     page_tokens = session.get('page_tokens', {})
     page_token = page_tokens.get(page_id)
-    
+
     if not page_token:
         return jsonify({'error': 'Page token not found or insufficient permissions'}), 403
-    
-    insights_url = f"https://graph.facebook.com/v22.0/{page_id}/video_insights"
-    insights_params = {
-        "metric": "total_video_ad_break_earnings,creator_monetization_qualified_views",
+
+    # Step 1: Fetch Video IDs for the given Page ID
+    videos_url = f"https://graph.facebook.com/v22.0/{page_id}/videos"
+    videos_params = {
+        "fields": "id",  # Fetch only video IDs
         "access_token": page_token
     }
-    
+
     try:
-        response = requests.get(insights_url, params=insights_params)
-        response.raise_for_status()
-        data = response.json()
-        return jsonify(data)
+        videos_response = requests.get(videos_url, params=videos_params)
+        videos_response.raise_for_status()
+        videos_data = videos_response.json()
+
+        if 'data' not in videos_data or not videos_data['data']:
+            return jsonify({'error': 'No videos found for this page'}), 404
+
+        video_ids = [video['id'] for video in videos_data['data']]
+
+        # Step 2: Fetch Monetization Insights for each Video ID
+        insights_results = []
+        for video_id in video_ids:
+            insights_url = f"https://graph.facebook.com/v22.0/{video_id}/video_insights"
+            insights_params = {
+                "metric": "total_video_ad_break_earnings,creator_monetization_qualified_views",
+                "access_token": page_token
+            }
+
+            insights_response = requests.get(insights_url, params=insights_params)
+            insights_response.raise_for_status()
+            insights_data = insights_response.json()
+
+            insights_results.append({
+                "video_id": video_id,
+                "insights": insights_data
+            })
+
+        return jsonify(insights_results)
+
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
